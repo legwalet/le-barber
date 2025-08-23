@@ -1,0 +1,327 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* Button Styles */
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-trip transition-all duration-200 shadow-trip hover:shadow-trip-lg transform hover:scale-105 text-sm sm:text-base min-h-[44px] flex items-center justify-center;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-primary-600 font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-trip border-2 border-primary-200 hover:border-primary-300 transition-all duration-200 shadow-trip hover:shadow-trip-lg transform hover:scale-105 text-sm sm:text-base min-h-[44px] flex items-center justify-center;
+  }
+  
+  .btn-accent {
+    @apply bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-trip transition-all duration-200 shadow-trip hover:shadow-trip-lg transform hover:scale-105 text-sm sm:text-base min-h-[44px] flex items-center justify-center;
+  }
+
+  /* Card Styles */
+  .card {
+    @apply bg-white rounded-trip shadow-trip p-4 sm:p-6 border border-gray-100;
+  }
+  
+  .card-hover {
+    @apply bg-white rounded-trip shadow-trip p-4 sm:p-6 border border-gray-100 hover:shadow-trip-lg transition-all duration-300 transform hover:scale-105;
+  }
+
+  /* Input Styles */
+  .input-field {
+    @apply w-full px-4 py-2 sm:py-3 border border-gray-200 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm sm:text-base min-h-[44px];
+  }
+
+  /* Star Rating */
+  .star {
+    @apply text-yellow-400 text-lg;
+  }
+  
+  .star-empty {
+    @apply text-gray-300 text-lg;
+  }
+
+  /* Gradient Backgrounds */
+  .gradient-bg {
+    @apply bg-gradient-to-br from-primary-500 to-primary-600;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent;
+  }
+
+  /* Phone Frame */
+  .phone-frame {
+    @apply bg-white rounded-trip-lg shadow-trip-lg p-4 sm:p-6 border-4 sm:border-8 border-gray-800 mx-auto max-w-xs sm:max-w-sm lg:max-w-md;
+  }
+
+  /* Service Icons */
+  .service-icon {
+    @apply w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-trip-lg mx-auto mb-3 sm:mb-4 transform hover:scale-110 transition-all duration-300;
+  }
+
+  /* Deals Banner */
+  .deals-banner {
+    @apply p-6 sm:p-8 rounded-trip-lg shadow-trip-lg transform hover:scale-105 transition-all duration-300;
+  }
+
+  /* Tab Button */
+  .tab-button {
+    @apply px-3 sm:px-4 py-2 sm:py-3 rounded-trip text-sm sm:text-base font-medium transition-all duration-200;
+  }
+  
+  .tab-button.active {
+    @apply bg-primary-500 text-white shadow-trip;
+  }
+  
+  .tab-button.inactive {
+    @apply bg-white text-gray-600 hover:bg-primary-50 hover:text-primary-600 border border-gray-200;
+  }
+
+  /* Responsive Grid Utilities */
+  .responsive-grid-1 { @apply grid-cols-1; }
+  .responsive-grid-2 { @apply grid-cols-1 sm:grid-cols-2; }
+  .responsive-grid-3 { @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3; }
+  .responsive-grid-4 { @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-4; }
+
+  /* Responsive Text Utilities */
+  .responsive-text-xs { @apply text-xs sm:text-sm; }
+  .responsive-text-sm { @apply text-sm sm:text-base; }
+  .responsive-text-base { @apply text-base sm:text-lg; }
+  .responsive-text-lg { @apply text-lg sm:text-xl; }
+  .responsive-text-xl { @apply text-xl sm:text-2xl; }
+  .responsive-text-2xl { @apply text-2xl sm:text-3xl; }
+  .responsive-text-3xl { @apply text-3xl sm:text-4xl; }
+  .responsive-text-4xl { @apply text-4xl sm:text-5xl; }
+  .responsive-text-5xl { @apply text-5xl sm:text-6xl; }
+
+  /* Responsive Section Utilities */
+  .responsive-section { @apply py-8 sm:py-12 lg:py-16; }
+  .responsive-container { @apply px-3 sm:px-4 lg:px-8; }
+  .responsive-gap { @apply gap-4 sm:gap-6 lg:gap-8; }
+
+  /* Map Container */
+  .map-container {
+    @apply w-full h-64 sm:h-80 md:h-96 lg:h-[500px];
+  }
+}
+
+/* MapLibre Styles */
+.maplibregl-map {
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.15);
+}
+
+.maplibregl-popup-content-wrapper {
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.2);
+  border: none;
+}
+
+.maplibregl-popup-content {
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: white;
+}
+
+.maplibregl-popup-close-button {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  color: #374151;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.maplibregl-popup-close-button:hover {
+  background: white;
+  color: #1f2937;
+}
+
+/* Custom Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounceGentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(14, 165, 233, 0.6); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 640px) {
+  .phone-frame {
+    @apply p-3 border-2;
+  }
+  
+  .service-icon {
+    @apply w-14 h-14;
+  }
+  
+  .deals-banner {
+    @apply p-4;
+  }
+  
+  .tab-button {
+    @apply px-2 py-2 text-xs;
+  }
+  
+  /* Ensure buttons are touch-friendly on mobile */
+  button, a {
+    @apply min-h-[44px];
+  }
+  
+  /* Optimize text sizes for mobile */
+  h1 {
+    @apply text-3xl sm:text-4xl lg:text-5xl;
+  }
+  
+  h2 {
+    @apply text-2xl sm:text-3xl lg:text-4xl;
+  }
+  
+  h3 {
+    @apply text-xl sm:text-2xl lg:text-3xl;
+  }
+  
+  p {
+    @apply text-sm sm:text-base lg:text-lg;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .phone-frame {
+    @apply p-4 border-4;
+  }
+  
+  .service-icon {
+    @apply w-16 h-16;
+  }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1025px) {
+  .phone-frame {
+    @apply p-6 border-8;
+  }
+  
+  .service-icon {
+    @apply w-20 h-20;
+  }
+}
+
+/* Ensure proper spacing on all devices */
+@media (max-width: 768px) {
+  .responsive-section {
+    @apply py-8;
+  }
+  
+  .responsive-container {
+    @apply px-4;
+  }
+  
+  .responsive-gap {
+    @apply gap-4;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .responsive-section {
+    @apply py-12;
+  }
+  
+  .responsive-container {
+    @apply px-6;
+  }
+  
+  .responsive-gap {
+    @apply gap-6;
+  }
+}
+
+@media (min-width: 1025px) {
+  .responsive-section {
+    @apply py-16;
+  }
+  
+  .responsive-container {
+    @apply px-8;
+  }
+  
+  .responsive-gap {
+    @apply gap-8;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-pulse-glow,
+  .transform,
+  .hover\:scale-105:hover,
+  .hover\:scale-110:hover {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card {
+    @apply border-2 border-gray-800;
+  }
+  
+  .btn-primary,
+  .btn-secondary,
+  .btn-accent {
+    @apply border-2 border-current;
+  }
+}
+
+/* Print styles */
+@media print {
+  .btn-primary,
+  .btn-secondary,
+  .btn-accent,
+  .phone-frame,
+  .deals-banner {
+    @apply shadow-none border border-gray-400;
+  }
+  
+  .animate-float,
+  .animate-pulse-glow {
+    animation: none;
+  }
+} 
