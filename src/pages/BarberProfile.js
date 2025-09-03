@@ -27,10 +27,18 @@ const BarberProfile = () => {
   const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
-    // Find the barber by ID
-    const foundBarber = barbers.find(b => b.id === barberId);
+    // Wait for barbers to be loaded
+    if (barbers.length === 0) {
+      setLoading(true);
+      return;
+    }
+
+    // Find the barber by ID - handle both string and number IDs
+    const foundBarber = barbers.find(b => b.id === parseInt(barberId) || b.id === barberId);
     if (foundBarber) {
       setBarber(foundBarber);
+    } else {
+      console.log('Barber not found:', { barberId, barbers: barbers.map(b => ({ id: b.id, name: b.name })) });
     }
     setLoading(false);
 
@@ -175,9 +183,9 @@ const BarberProfile = () => {
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Services Offered</h3>
                   <div className="grid grid-cols-2 gap-2">
                     {barber.services?.map((service) => (
-                      <div key={service} className="flex items-center space-x-2">
+                      <div key={service.name} className="flex items-center space-x-2">
                         <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-gray-700 capitalize">{service.replace('-', ' ')}</span>
+                        <span className="text-gray-700">{service.name}</span>
                       </div>
                     )) || (
                       <>
@@ -211,11 +219,11 @@ const BarberProfile = () => {
                 <div className="mb-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-3">Services & Pricing</h3>
                   <div className="space-y-3">
-                    {barber.pricing ? (
-                      Object.entries(barber.pricing).map(([service, price]) => (
-                        <div key={service} className="flex justify-between items-center p-3 bg-gray-50 rounded-trip">
-                          <span className="font-medium text-gray-900 capitalize">{service.replace('_', ' ')}</span>
-                          <span className="text-primary-600 font-semibold">R{price}</span>
+                    {barber.services ? (
+                      barber.services.map((service) => (
+                        <div key={service.name} className="flex justify-between items-center p-3 bg-gray-50 rounded-trip">
+                          <span className="font-medium text-gray-900">{service.name}</span>
+                          <span className="text-primary-600 font-semibold">R{service.price}</span>
                         </div>
                       ))
                     ) : (

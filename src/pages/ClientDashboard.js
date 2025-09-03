@@ -98,7 +98,7 @@ const ClientDashboard = () => {
     const matchesSearch = barber.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          barber.address.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesService = selectedService === 'all' || 
-                          barber.services.includes(selectedService);
+                          barber.services?.some(service => service.name.toLowerCase().includes(selectedService));
     return matchesSearch && matchesService;
   });
 
@@ -303,7 +303,7 @@ const ClientDashboard = () => {
                             </div>
                             <div className="flex items-center text-sm text-gray-600">
                               <DollarSign className="w-4 h-4 mr-2" />
-                              <span>From R{barber.pricing?.haircut || 'Contact for pricing'}</span>
+                              <span>From R{barber.services?.[0]?.price || 'Contact for pricing'}</span>
                             </div>
                           </div>
 
