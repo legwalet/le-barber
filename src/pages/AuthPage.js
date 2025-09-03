@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
@@ -28,6 +28,7 @@ const AuthPage = () => {
   const [userType, setUserType] = useState(null); // 'barber' or 'client'
   const [step, setStep] = useState(1);
   const [authMode, setAuthMode] = useState(null); // 'login' or 'signin'
+  const [redirectInfo, setRedirectInfo] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -41,6 +42,29 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Check for redirect parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirect = urlParams.get('redirect');
+    const id = urlParams.get('id');
+    
+    if (redirect === 'barber' && id) {
+      setRedirectInfo({ type: 'barber', id });
+      // Auto-select client user type for barber bookings
+      setUserType('client');
+    }
+  }, []);
+
+  const handleSuccessfulAuth = () => {
+    if (redirectInfo && redirectInfo.type === 'barber') {
+      // Redirect back to the specific barber profile
+      navigate(`/barber/${redirectInfo.id}`);
+    } else {
+      // Default redirect to home
+      navigate('/');
+    }
+  };
+
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     setError('');
@@ -48,7 +72,7 @@ const AuthPage = () => {
     try {
       const result = await googleLogin(credentialResponse.credential, userType);
       if (result.success) {
-        navigate('/');
+        handleSuccessfulAuth();
       } else {
         setError(result.error || 'Google login failed');
       }
@@ -72,7 +96,7 @@ const AuthPage = () => {
       const result = await manualLogin(formData.email, formData.password);
       
       if (result.success) {
-        navigate('/');
+        handleSuccessfulAuth();
       } else {
         setError(result.error || 'Invalid credentials. Please check your email and password.');
       }
@@ -104,7 +128,7 @@ const AuthPage = () => {
       }, userType);
 
       if (result.success) {
-        navigate('/');
+        handleSuccessfulAuth();
       } else {
         setError(result.error || 'Registration failed');
       }
@@ -610,7 +634,9 @@ const AuthPage = () => {
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome to Le Barber</h1>
-            <p className="text-gray-600">Choose your role to get started</p>
+            <p className="text-gray-600">
+              {redirectInfo ? 'Choose your role to continue booking' : 'Choose your role to get started'}
+            </p>
           </div>
           
           <div className="grid md:grid-cols-2 gap-6">
