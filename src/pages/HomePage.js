@@ -1,13 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Scissors, Users, Star, ArrowRight, MapPin, Navigation } from 'lucide-react';
+import { Scissors, Users, Star, ArrowRight, MapPin, Navigation, Phone, User, Calendar, DollarSign, CheckCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import database from '../services/database';
 
 const HomePage = () => {
   const { barbers } = useApp();
+  const { isAuthenticated } = useAuth();
   const [popupInfo, setPopupInfo] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [nearbyBarbers, setNearbyBarbers] = useState([]);
+  const [showQuickBooking, setShowQuickBooking] = useState(false);
+  const [bookingForm, setBookingForm] = useState({
+    name: '',
+    phone: '',
+    service: 'haircut',
+    preferredDate: '',
+    maxPrice: '',
+    notes: ''
+  });
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [bookingError, setBookingError] = useState('');
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
 
@@ -49,6 +64,51 @@ const HomePage = () => {
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
+  };
+
+  // Handle quick booking submission
+  const handleQuickBooking = async (e) => {
+    e.preventDefault();
+    setBookingLoading(true);
+    setBookingError('');
+
+    try {
+      const bookingRequest = {
+        id: `request_${Date.now()}`,
+        clientName: bookingForm.name,
+        clientPhone: bookingForm.phone,
+        service: bookingForm.service,
+        preferredDate: bookingForm.preferredDate,
+        maxPrice: parseFloat(bookingForm.maxPrice) || 0,
+        notes: bookingForm.notes,
+        location: userLocation,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        isQuickBooking: true // Flag to identify quick bookings
+      };
+
+      await database.createBookingRequest(bookingRequest);
+      setBookingSuccess(true);
+      setBookingForm({
+        name: '',
+        phone: '',
+        service: 'haircut',
+        preferredDate: '',
+        maxPrice: '',
+        notes: ''
+      });
+    } catch (error) {
+      setBookingError('Failed to submit booking request. Please try again.');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setBookingForm({
+      ...bookingForm,
+      [e.target.name]: e.target.value
+    });
   };
 
   // Initialize MapQuest map
@@ -151,12 +211,179 @@ const HomePage = () => {
             <Link to="/barbers" className="btn-primary text-lg px-8 py-4">
               Find Barbers Now
             </Link>
-            <Link to="/dashboard/client" className="btn-secondary text-lg px-8 py-4">
-              View My Bookings
-            </Link>
+            {isAuthenticated() ? (
+              <Link to="/dashboard/client" className="btn-secondary text-lg px-8 py-4">
+                View My Bookings
+              </Link>
+            ) : (
+              <button 
+                onClick={() => setShowQuickBooking(true)}
+                className="btn-accent text-lg px-8 py-4"
+              >
+                Quick Book Now
+              </button>
+            )}
           </div>
         </div>
       </section>
+
+      {/* Quick Booking Modal */}
+      {showQuickBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-trip max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Quick Book a Barber</h2>
+              <button 
+                onClick={() => setShowQuickBooking(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            {bookingSuccess ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Booking Request Sent!</h3>
+                <p className="text-gray-600 mb-4">
+                  Barbers in your area will be notified of your request. You'll receive a call or message when someone accepts.
+                </p>
+                <button 
+                  onClick={() => {
+                    setShowQuickBooking(false);
+                    setBookingSuccess(false);
+                  }}
+                  className="btn-primary"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleQuickBooking} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      name="name"
+                      value={bookingForm.name}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={bookingForm.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Enter your phone number"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Service Needed</label>
+                  <select
+                    name="service"
+                    value={bookingForm.service}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="haircut">Haircut</option>
+                    <option value="beard-trim">Beard Trim</option>
+                    <option value="haircut-beard">Haircut + Beard</option>
+                    <option value="shave">Shave</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="date"
+                      name="preferredDate"
+                      value={bookingForm.preferredDate}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Budget (R)</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="number"
+                      name="maxPrice"
+                      value={bookingForm.maxPrice}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Enter your budget"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+                  <textarea
+                    name="notes"
+                    value={bookingForm.notes}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    rows="3"
+                    placeholder="Any specific requirements or preferences..."
+                  />
+                </div>
+
+                {bookingError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-trip text-red-600 text-sm">
+                    {bookingError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickBooking(false)}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-trip text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={bookingLoading}
+                    className="flex-1 btn-primary disabled:opacity-50"
+                  >
+                    {bookingLoading ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">
+                    By submitting this request, you agree to be contacted by barbers in your area.
+                  </p>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Location Info */}
       {userLocation && (

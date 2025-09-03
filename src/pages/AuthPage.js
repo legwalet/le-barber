@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  LogIn
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 
 const AuthPage = () => {
@@ -26,6 +27,7 @@ const AuthPage = () => {
   const { googleLogin, manualRegister, manualLogin } = useAuth();
   const [userType, setUserType] = useState(null); // 'barber' or 'client'
   const [step, setStep] = useState(1);
+  const [authMode, setAuthMode] = useState(null); // 'login' or 'signin'
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -61,22 +63,32 @@ const AuthPage = () => {
     setError('Google login failed');
   };
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Check if user exists first
-      const existingUser = await manualLogin(formData.email, formData.password);
+      const result = await manualLogin(formData.email, formData.password);
       
-      if (existingUser.success) {
-        // User exists, login successful
+      if (result.success) {
         navigate('/');
-        return;
+      } else {
+        setError(result.error || 'Invalid credentials. Please check your email and password.');
       }
+    } catch (error) {
+      setError('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // User doesn't exist, try to register
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
       if (formData.password !== formData.confirmPassword) {
         setError('Passwords do not match');
         setLoading(false);
@@ -94,10 +106,10 @@ const AuthPage = () => {
       if (result.success) {
         navigate('/');
       } else {
-        setError(result.error || 'Authentication failed');
+        setError(result.error || 'Registration failed');
       }
     } catch (error) {
-      setError('Authentication failed');
+      setError('Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -111,7 +123,9 @@ const AuthPage = () => {
   };
 
   const goBack = () => {
-    if (step > 1) {
+    if (authMode) {
+      setAuthMode(null);
+    } else if (step > 1) {
       setStep(step - 1);
     } else {
       setUserType(null);
@@ -141,7 +155,7 @@ const AuthPage = () => {
         </div>
       )}
 
-      {step === 2 && (
+      {step === 2 && !authMode && (
         <div>
           <div className="mb-6">
             <button
@@ -151,9 +165,9 @@ const AuthPage = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Sign In / Register</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Your Account</h2>
             <p className="text-gray-600">
-              Enter your details to sign in or create a new account
+              Choose how you'd like to access your barber account
             </p>
           </div>
 
@@ -178,21 +192,65 @@ const AuthPage = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter your full name"
-                />
+          <div className="space-y-4">
+            <button
+              onClick={() => setAuthMode('login')}
+              className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-4 px-6 rounded-trip font-semibold hover:from-primary-700 hover:to-primary-800 transition-all duration-200 flex items-center justify-center space-x-2"
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Login to Existing Account</span>
+            </button>
+
+            <button
+              onClick={() => setAuthMode('signin')}
+              className="w-full bg-white text-primary-600 py-4 px-6 rounded-trip font-semibold border-2 border-primary-600 hover:bg-primary-50 transition-all duration-200 flex items-center justify-center space-x-2"
+            >
+              <UserPlus className="w-5 h-5" />
+              <span>Create New Account</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && authMode && (
+        <div>
+          <div className="mb-6">
+            <button
+              onClick={goBack}
+              className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              {authMode === 'login' ? 'Login to Your Account' : 'Create New Account'}
+            </h2>
+            <p className="text-gray-600">
+              {authMode === 'login' 
+                ? 'Enter your credentials to access your account'
+                : 'Fill in your details to create a new barber account'
+              }
+            </p>
+          </div>
+
+          <form onSubmit={authMode === 'login' ? handleLogin : handleSignIn} className="space-y-4">
+            {authMode === 'signin' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Enter your full name"
+                    required={authMode === 'signin'}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
@@ -210,35 +268,39 @@ const AuthPage = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter your phone number"
-                />
-              </div>
-            </div>
+            {authMode === 'signin' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Enter your phone number"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  name="businessName"
-                  value={formData.businessName}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter your business name"
-                />
-              </div>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
+                  <div className="relative">
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      name="businessName"
+                      value={formData.businessName}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Enter your business name"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
@@ -250,7 +312,7 @@ const AuthPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter your password"
+                  placeholder={authMode === 'login' ? "Enter your password" : "Create a password"}
                   required
                 />
                 <button
@@ -263,27 +325,30 @@ const AuthPage = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Confirm your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            {authMode === 'signin' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Confirm your password"
+                    required={authMode === 'signin'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {error && (
               <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-trip text-red-600">
@@ -301,17 +366,11 @@ const AuthPage = () => {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <LogIn className="w-5 h-5" />
-                  <span>Sign In / Register</span>
+                  {authMode === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                  <span>{authMode === 'login' ? 'Login' : 'Create Account'}</span>
                 </>
               )}
             </button>
-
-            <div className="text-center mt-4">
-              <p className="text-sm text-gray-600">
-                Enter your details above to sign in or create a new account
-              </p>
-            </div>
           </form>
         </div>
       )}
@@ -340,7 +399,7 @@ const AuthPage = () => {
         </div>
       )}
 
-      {step === 2 && (
+      {step === 2 && !authMode && (
         <div>
           <div className="mb-6">
             <button
@@ -350,9 +409,9 @@ const AuthPage = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Sign In / Register</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Your Account</h2>
             <p className="text-gray-600">
-              Enter your details to sign in or create a new account
+              Choose how you'd like to access your client account
             </p>
           </div>
 
@@ -377,21 +436,65 @@ const AuthPage = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your full name"
-                />
+          <div className="space-y-4">
+            <button
+              onClick={() => setAuthMode('login')}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-6 rounded-trip font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center space-x-2"
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Login to Existing Account</span>
+            </button>
+
+            <button
+              onClick={() => setAuthMode('signin')}
+              className="w-full bg-white text-blue-600 py-4 px-6 rounded-trip font-semibold border-2 border-blue-600 hover:bg-blue-50 transition-all duration-200 flex items-center justify-center space-x-2"
+            >
+              <UserPlus className="w-5 h-5" />
+              <span>Create New Account</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && authMode && (
+        <div>
+          <div className="mb-6">
+            <button
+              onClick={goBack}
+              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              {authMode === 'login' ? 'Login to Your Account' : 'Create New Account'}
+            </h2>
+            <p className="text-gray-600">
+              {authMode === 'login' 
+                ? 'Enter your credentials to access your account'
+                : 'Fill in your details to create a new client account'
+              }
+            </p>
+          </div>
+
+          <form onSubmit={authMode === 'login' ? handleLogin : handleSignIn} className="space-y-4">
+            {authMode === 'signin' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your full name"
+                    required={authMode === 'signin'}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
@@ -409,20 +512,22 @@ const AuthPage = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your phone number"
-                />
+            {authMode === 'signin' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your phone number"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
@@ -434,7 +539,7 @@ const AuthPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your password"
+                  placeholder={authMode === 'login' ? "Enter your password" : "Create a password"}
                   required
                 />
                 <button
@@ -447,27 +552,30 @@ const AuthPage = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Confirm your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            {authMode === 'signin' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Confirm your password"
+                    required={authMode === 'signin'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {error && (
               <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-trip text-red-600">
@@ -485,17 +593,11 @@ const AuthPage = () => {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <LogIn className="w-5 h-5" />
-                  <span>Sign In / Register</span>
+                  {authMode === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                  <span>{authMode === 'login' ? 'Login' : 'Create Account'}</span>
                 </>
               )}
             </button>
-
-            <div className="text-center mt-4">
-              <p className="text-sm text-gray-600">
-                Enter your details above to sign in or create a new account
-              </p>
-            </div>
           </form>
         </div>
       )}

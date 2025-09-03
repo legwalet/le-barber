@@ -61,26 +61,25 @@ const BarberDashboard = () => {
       // Load barber profile
       const profile = await getBarberProfile();
       setBarberProfile(profile);
-
+      
       // Load bookings
       const userBookings = await getUserBookings();
       setBookings(userBookings);
-
-      // Load rentals
+      
+      // Load rental spaces
       if (profile) {
         const userRentals = await database.getRentalsByBarber(profile.id);
         setRentals(userRentals);
       }
-
-      // Load booking requests
-      const pendingRequests = await database.getPendingBookingRequests();
-      setBookingRequests(pendingRequests);
-
-      // Load invitations
-      if (user) {
-        const userInvitations = await database.getInvitationsByInviter(user.id);
-        setInvitations(userInvitations);
-      }
+      
+      // Load booking requests (including quick bookings)
+      const requests = await database.getPendingBookingRequests();
+      setBookingRequests(requests);
+      
+      // Load invitations sent by this barber
+      const userInvitations = await database.getInvitationsByInviter(user.id);
+      setInvitations(userInvitations);
+      
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -174,6 +173,19 @@ const BarberDashboard = () => {
       }
     } catch (error) {
       console.error('Error accepting request:', error);
+    }
+  };
+
+  const handleDeclineRequest = async (requestId) => {
+    try {
+      await database.updateBookingRequest(requestId, {
+        status: 'declined',
+        declinedBy: barberProfile.id,
+        declinedAt: new Date().toISOString()
+      });
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error declining request:', error);
     }
   };
 
@@ -426,40 +438,89 @@ const BarberDashboard = () => {
             {activeTab === 'requests' && (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-medium text-gray-900">Client Requests</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Client Requests</h3>
+                  <div className="text-sm text-gray-500">
+                    {bookingRequests.length} pending request{bookingRequests.length !== 1 ? 's' : ''}
+                  </div>
                 </div>
-                <div className="space-y-4">
-                  {bookingRequests.map((request) => (
-                    <div key={request.id} className="bg-gray-50 rounded-trip p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900">{request.service}</h4>
-                          <p className="text-sm text-gray-600">Client: {request.clientName}</p>
-                          <p className="text-sm text-gray-600">Max Price: ${request.maxPrice}</p>
-                          <p className="text-sm text-gray-600">Preferred: {request.preferredDate} at {request.preferredTime}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>
+                
+                {bookingRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No pending client requests</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookingRequests.map((request) => (
+                      <div key={request.id} className="bg-white border border-gray-200 rounded-trip p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 text-lg">
+                              {request.isQuickBooking ? request.clientName : 'Client Request'}
+                            </h4>
+                            <p className="text-gray-600 text-sm">
+                              {request.isQuickBooking ? `Phone: ${request.clientPhone}` : `Client ID: ${request.clientId}`}
+                            </p>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
                             {request.status}
                           </span>
-                          {request.status === 'pending' && (
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <p className="text-sm text-gray-600">Service</p>
+                            <p className="font-medium text-gray-900">{request.service}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Preferred Date</p>
+                            <p className="font-medium text-gray-900">
+                              {request.preferredDate ? new Date(request.preferredDate).toLocaleDateString() : 'Flexible'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Maximum Budget</p>
+                            <p className="font-medium text-gray-900">
+                              {request.maxPrice ? `R${request.maxPrice}` : 'Not specified'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Request Date</p>
+                            <p className="font-medium text-gray-900">
+                              {new Date(request.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {request.notes && (
+                          <div className="mb-4">
+                            <p className="text-sm text-gray-600">Notes</p>
+                            <p className="text-gray-900">{request.notes}</p>
+                          </div>
+                        )}
+                        
+                        {request.status === 'pending' && (
+                          <div className="flex gap-3">
                             <button
                               onClick={() => handleAcceptRequest(request.id)}
-                              className="bg-primary-600 text-white px-4 py-2 rounded-trip hover:bg-primary-700"
+                              className="flex-1 bg-green-600 text-white px-4 py-2 rounded-trip hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
                             >
-                              Accept Request
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Accept Request</span>
                             </button>
-                          )}
-                        </div>
+                            <button
+                              onClick={() => handleDeclineRequest(request.id)}
+                              className="flex-1 bg-red-600 text-white px-4 py-2 rounded-trip hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              <span>Decline</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {request.notes && (
-                        <p className="text-sm text-gray-600 bg-white p-3 rounded-trip">
-                          <strong>Notes:</strong> {request.notes}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
