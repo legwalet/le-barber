@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import {
   MapPin,
   Scissors,
@@ -10,13 +11,17 @@ import {
   Home,
   Users,
   Building,
-  Calendar
+  Calendar,
+  LogOut,
+  LogIn,
+  UserCircle
 } from 'lucide-react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const { userType, setUserType } = useApp();
+  const { user, isAuthenticated, logout } = useAuth();
 
   // Memoize navigation to ensure it updates when userType changes
   const navigation = useMemo(() => [
@@ -30,6 +35,11 @@ const Header = () => {
 
   const toggleUserType = () => {
     setUserType(userType === 'client' ? 'barber' : 'client');
+    setIsMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
     setIsMenuOpen(false);
   };
 
@@ -72,15 +82,67 @@ const Header = () => {
 
           {/* User Type Toggle & Location */}
           <div className="hidden md:flex items-center space-x-4">
-            <button
-              onClick={toggleUserType}
-              className="px-6 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white border border-white/30 hover:bg-white/30"
-            >
-              <div className="flex items-center space-x-2">
-                <User className="w-4 h-4" />
-                <span>{userType === 'client' ? 'Client' : 'Barber'}</span>
+            {isAuthenticated() ? (
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={toggleUserType}
+                  className="px-6 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white border border-white/30 hover:bg-white/30"
+                >
+                  <div className="flex items-center space-x-2">
+                    <User className="w-4 h-4" />
+                    <span>{userType === 'client' ? 'Client' : 'Barber'}</span>
+                  </div>
+                </button>
+
+                <div className="flex items-center space-x-3 bg-white/10 px-4 py-3 rounded-trip border border-white/20">
+                  {user?.picture ? (
+                    <img 
+                      src={user.picture} 
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <UserCircle className="w-8 h-8 text-white/90" />
+                  )}
+                  <div className="text-sm">
+                    <div className="font-medium text-white">{user?.name}</div>
+                    <div className="text-white/70 text-xs">{user?.email}</div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-red-600/20 text-white border border-red-300/30 hover:bg-red-600/30"
+                >
+                  <div className="flex items-center space-x-2">
+                    <LogOut className="w-4 h-4" />
+                    <span>Logout</span>
+                  </div>
+                </button>
               </div>
-            </button>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={toggleUserType}
+                  className="px-6 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white border border-white/30 hover:bg-white/30"
+                >
+                  <div className="flex items-center space-x-2">
+                    <User className="w-4 h-4" />
+                    <span>{userType === 'client' ? 'Client' : 'Barber'}</span>
+                  </div>
+                </button>
+
+                <Link
+                  to="/auth"
+                  className="px-6 py-3 rounded-trip font-medium transition-all duration-200 bg-white text-primary-600 hover:bg-gray-100"
+                >
+                  <div className="flex items-center space-x-2">
+                    <LogIn className="w-4 h-4" />
+                    <span>Sign In</span>
+                  </div>
+                </Link>
+              </div>
+            )}
 
             <div className="flex items-center space-x-2 text-white/90 bg-white/10 px-4 py-3 rounded-trip border border-white/20">
               <MapPin className="w-4 h-4" />
@@ -124,13 +186,62 @@ const Header = () => {
                 );
               })}
 
-              <button
-                onClick={toggleUserType}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white"
-              >
-                <User className="w-5 h-5" />
-                <span>Switch to {userType === 'client' ? 'Barber' : 'Client'}</span>
-              </button>
+              {isAuthenticated() ? (
+                <>
+                  <div className="px-4 py-3 border-t border-white/20">
+                    <div className="flex items-center space-x-3 mb-3">
+                      {user?.picture ? (
+                        <img 
+                          src={user.picture} 
+                          alt={user.name}
+                          className="w-10 h-10 rounded-full"
+                        />
+                      ) : (
+                        <UserCircle className="w-10 h-10 text-white/90" />
+                      )}
+                      <div>
+                        <div className="font-medium text-white">{user?.name}</div>
+                        <div className="text-white/70 text-sm">{user?.email}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={toggleUserType}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white"
+                  >
+                    <User className="w-5 h-5" />
+                    <span>Switch to {userType === 'client' ? 'Barber' : 'Client'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-red-600/20 text-white"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>Logout</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={toggleUserType}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white"
+                  >
+                    <User className="w-5 h-5" />
+                    <span>Switch to {userType === 'client' ? 'Barber' : 'Client'}</span>
+                  </button>
+
+                  <Link
+                    to="/auth"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-white text-primary-600"
+                  >
+                    <LogIn className="w-5 h-5" />
+                    <span>Sign In</span>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}
