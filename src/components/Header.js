@@ -18,47 +18,44 @@ import {
   Calendar,
   LogOut,
   LogIn,
-  UserCircle
+  UserCircle,
+  Bell
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { userType, setUserType } = useApp();
+  const { userType } = useApp();
   const { user, isAuthenticated, logout } = useAuth();
 
   // Memoize navigation to ensure it updates when userType changes
   const navigation = useMemo(() => {
     const baseNav = [
-      { name: 'Home', href: '/', icon: null },
-      { name: 'Barbers', href: '/barbers', icon: null }
+      { name: 'Home', href: '/', icon: null }
     ];
 
     // Add conditional navigation items based on user type and authentication
-    if (userType === 'barber') {
-      if (isAuthenticated()) {
+    if (isAuthenticated()) {
+      if (userType === 'barber') {
         baseNav.push(
           { name: 'Dashboard', href: '/dashboard/barber', icon: null },
+          { name: 'Live Clients', href: '/dashboard/barber?tab=live', icon: null },
           { name: 'Rentals', href: '/rentals', icon: null }
         );
-      }
-    } else if (userType === 'client') {
-      if (isAuthenticated()) {
+      } else if (userType === 'client') {
         baseNav.push(
-          { name: 'Dashboard', href: '/dashboard/client', icon: null },
+          { name: 'Find Barbers', href: '/barbers', icon: null },
           { name: 'My Bookings', href: '/dashboard/client', icon: null }
         );
       }
+    } else {
+      // For unauthenticated users, show basic navigation
+      baseNav.push({ name: 'Find Barbers', href: '/barbers', icon: null });
     }
 
     return baseNav;
   }, [userType, isAuthenticated]);
-
-  const toggleUserType = () => {
-    setUserType(userType === 'client' ? 'barber' : 'client');
-    setIsMenuOpen(false);
-  };
 
   const handleLogout = () => {
     logout();
@@ -92,20 +89,10 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* User Type Toggle & Location */}
+          {/* User Actions & Location */}
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated() ? (
               <div className="flex items-center space-x-4">
-                <button
-                  onClick={toggleUserType}
-                  className="px-6 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white border border-white/30 hover:bg-white/30"
-                >
-                  <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4" />
-                    <span>{userType === 'client' ? 'Client' : 'Barber'}</span>
-                  </div>
-                </button>
-
                 <div className="flex items-center space-x-3 bg-white/10 px-4 py-3 rounded-trip border border-white/20">
                   {user?.picture ? (
                     <img 
@@ -118,7 +105,9 @@ const Header = () => {
                   )}
                   <div className="text-sm">
                     <div className="font-medium text-white">{user?.name}</div>
-                    <div className="text-white/70 text-xs">{user?.email}</div>
+                    <div className="text-white/70 text-xs">
+                      {userType === 'barber' ? 'Barber' : 'Client'}
+                    </div>
                   </div>
                 </div>
 
@@ -133,27 +122,15 @@ const Header = () => {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={toggleUserType}
-                  className="px-6 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white border border-white/30 hover:bg-white/30"
-                >
-                  <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4" />
-                    <span>{userType === 'client' ? 'Client' : 'Barber'}</span>
-                  </div>
-                </button>
-
-                <Link
-                  to="/auth"
-                  className="px-6 py-3 rounded-trip font-medium transition-all duration-200 bg-white text-primary-600 hover:bg-gray-100"
-                >
-                  <div className="flex items-center space-x-2">
-                    <LogIn className="w-4 h-4" />
-                    <span>Sign In</span>
-                  </div>
-                </Link>
-              </div>
+              <Link
+                to="/auth"
+                className="px-6 py-3 rounded-trip font-medium transition-all duration-200 bg-white text-primary-600 hover:bg-gray-100"
+              >
+                <div className="flex items-center space-x-2">
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </div>
+              </Link>
             )}
 
             <div className="flex items-center space-x-2 text-white/90 bg-white/10 px-4 py-3 rounded-trip border border-white/20">
@@ -207,18 +184,12 @@ const Header = () => {
                       )}
                       <div>
                         <div className="font-medium text-white">{user?.name}</div>
-                        <div className="text-white/70 text-sm">{user?.email}</div>
+                        <div className="text-white/70 text-sm">
+                          {userType === 'barber' ? 'Barber' : 'Client'}
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={toggleUserType}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white"
-                  >
-                    <User className="w-5 h-5" />
-                    <span>Switch to {userType === 'client' ? 'Barber' : 'Client'}</span>
-                  </button>
 
                   <button
                     onClick={handleLogout}
@@ -229,24 +200,14 @@ const Header = () => {
                   </button>
                 </>
               ) : (
-                <>
-                  <button
-                    onClick={toggleUserType}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-white/20 text-white"
-                  >
-                    <User className="w-5 h-5" />
-                    <span>Switch to {userType === 'client' ? 'Barber' : 'Client'}</span>
-                  </button>
-
-                  <Link
-                    to="/auth"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-white text-primary-600"
-                  >
-                    <LogIn className="w-5 h-5" />
-                    <span>Sign In</span>
-                  </Link>
-                </>
+                <Link
+                  to="/auth"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-trip font-medium transition-all duration-200 bg-white text-primary-600"
+                >
+                  <LogIn className="w-5 h-5" />
+                  <span>Sign In</span>
+                </Link>
               )}
             </div>
           </div>
