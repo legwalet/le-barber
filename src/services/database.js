@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'leBarberDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Increment version for new stores
 
 // Database schema
 const STORES = {
@@ -9,7 +9,9 @@ const STORES = {
   barbers: 'barbers',
   bookings: 'bookings',
   rentals: 'rentals',
-  reviews: 'reviews'
+  reviews: 'reviews',
+  invitations: 'invitations',
+  bookingRequests: 'bookingRequests'
 };
 
 class LeBarberDatabase {
@@ -41,18 +43,37 @@ class LeBarberDatabase {
           bookingStore.createIndex('clientId', 'clientId', { unique: false });
           bookingStore.createIndex('barberId', 'barberId', { unique: false });
           bookingStore.createIndex('date', 'date', { unique: false });
+          bookingStore.createIndex('status', 'status', { unique: false });
         }
 
         if (!db.objectStoreNames.contains(STORES.rentals)) {
           const rentalStore = db.createObjectStore(STORES.rentals, { keyPath: 'id' });
           rentalStore.createIndex('barberId', 'barberId', { unique: false });
           rentalStore.createIndex('location', 'location', { unique: false });
+          rentalStore.createIndex('status', 'status', { unique: false });
         }
 
         if (!db.objectStoreNames.contains(STORES.reviews)) {
           const reviewStore = db.createObjectStore(STORES.reviews, { keyPath: 'id' });
           reviewStore.createIndex('barberId', 'barberId', { unique: false });
           reviewStore.createIndex('clientId', 'clientId', { unique: false });
+        }
+
+        // New stores for version 2
+        if (!db.objectStoreNames.contains(STORES.invitations)) {
+          const invitationStore = db.createObjectStore(STORES.invitations, { keyPath: 'id' });
+          invitationStore.createIndex('inviterId', 'inviterId', { unique: false });
+          invitationStore.createIndex('inviteeEmail', 'inviteeEmail', { unique: false });
+          invitationStore.createIndex('code', 'code', { unique: true });
+          invitationStore.createIndex('status', 'status', { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains(STORES.bookingRequests)) {
+          const requestStore = db.createObjectStore(STORES.bookingRequests, { keyPath: 'id' });
+          requestStore.createIndex('clientId', 'clientId', { unique: false });
+          requestStore.createIndex('status', 'status', { unique: false });
+          requestStore.createIndex('location', 'location', { unique: false });
+          requestStore.createIndex('maxPrice', 'maxPrice', { unique: false });
         }
       }
     });
@@ -82,7 +103,9 @@ class LeBarberDatabase {
         pricing: userData.pricing || {},
         portfolio: userData.portfolio || [],
         rating: 0,
-        reviewCount: 0
+        reviewCount: 0,
+        isVerified: false,
+        invitationCode: userData.invitationCode || null
       } : {
         preferences: {
           preferredServices: userData.preferredServices || [],
@@ -161,6 +184,8 @@ class LeBarberDatabase {
       rating: barberData.rating || 0,
       reviewCount: barberData.reviewCount || 0,
       picture: barberData.picture,
+      isVerified: barberData.isVerified || false,
+      invitationCode: barberData.invitationCode || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -261,6 +286,14 @@ class LeBarberDatabase {
     return await index.getAll(barberId);
   }
 
+  async getBookingsByStatus(status) {
+    await this.init();
+    const tx = this.db.transaction(STORES.bookings, 'readonly');
+    const store = tx.objectStore(STORES.bookings);
+    const index = store.index('status');
+    return await index.getAll(status);
+  }
+
   async updateBooking(id, updates) {
     await this.init();
     const booking = await this.getBookingById(id);
@@ -274,6 +307,173 @@ class LeBarberDatabase {
 
     await this.db.put(STORES.bookings, updatedBooking);
     return updatedBooking;
+  }
+
+  // Rental operations
+  async createRental(rentalData) {
+    await this.init();
+    const rental = {
+      id: rentalData.id || `rental_${Date.now()}`,
+      barberId: rentalData.barberId,
+      title: rentalData.title,
+      description: rentalData.description,
+      address: rentalData.address,
+      location: rentalData.location,
+      price: rentalData.price,
+      priceType: rentalData.priceType || 'per_day', // per_day, per_week, per_month
+      amenities: rentalData.amenities || [],
+      images: rentalData.images || [],
+      status: rentalData.status || 'available',
+      contactInfo: rentalData.contactInfo,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.db.add(STORES.rentals, rental);
+    return rental;
+  }
+
+  async getRentalById(id) {
+    await this.init();
+    return await this.db.get(STORES.rentals, id);
+  }
+
+  async getRentalsByBarber(barberId) {
+    await this.init();
+    const tx = this.db.transaction(STORES.rentals, 'readonly');
+    const store = tx.objectStore(STORES.rentals);
+    const index = store.index('barberId');
+    return await index.getAll(barberId);
+  }
+
+  async getAllRentals() {
+    await this.init();
+    return await this.db.getAll(STORES.rentals);
+  }
+
+  async updateRental(id, updates) {
+    await this.init();
+    const rental = await this.getRentalById(id);
+    if (!rental) throw new Error('Rental not found');
+
+    const updatedRental = {
+      ...rental,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.db.put(STORES.rentals, updatedRental);
+    return updatedRental;
+  }
+
+  // Invitation operations
+  async createInvitation(invitationData) {
+    await this.init();
+    const invitation = {
+      id: invitationData.id || `invitation_${Date.now()}`,
+      inviterId: invitationData.inviterId,
+      inviterName: invitationData.inviterName,
+      inviterEmail: invitationData.inviterEmail,
+      inviteeEmail: invitationData.inviteeEmail,
+      code: invitationData.code,
+      status: invitationData.status || 'pending', // pending, accepted, expired
+      expiresAt: invitationData.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+      createdAt: new Date().toISOString()
+    };
+
+    await this.db.add(STORES.invitations, invitation);
+    return invitation;
+  }
+
+  async getInvitationByCode(code) {
+    await this.init();
+    const tx = this.db.transaction(STORES.invitations, 'readonly');
+    const store = tx.objectStore(STORES.invitations);
+    const index = store.index('code');
+    return await index.get(code);
+  }
+
+  async getInvitationsByInviter(inviterId) {
+    await this.init();
+    const tx = this.db.transaction(STORES.invitations, 'readonly');
+    const store = tx.objectStore(STORES.invitations);
+    const index = store.index('inviterId');
+    return await index.getAll(inviterId);
+  }
+
+  async updateInvitation(id, updates) {
+    await this.init();
+    const invitation = await this.db.get(STORES.invitations, id);
+    if (!invitation) throw new Error('Invitation not found');
+
+    const updatedInvitation = {
+      ...invitation,
+      ...updates
+    };
+
+    await this.db.put(STORES.invitations, updatedInvitation);
+    return updatedInvitation;
+  }
+
+  // Booking Request operations
+  async createBookingRequest(requestData) {
+    await this.init();
+    const request = {
+      id: requestData.id || `request_${Date.now()}`,
+      clientId: requestData.clientId,
+      clientName: requestData.clientName,
+      clientEmail: requestData.clientEmail,
+      service: requestData.service,
+      preferredDate: requestData.preferredDate,
+      preferredTime: requestData.preferredTime,
+      maxPrice: requestData.maxPrice,
+      location: requestData.location,
+      notes: requestData.notes || '',
+      status: requestData.status || 'pending', // pending, accepted, declined, expired
+      acceptedBy: requestData.acceptedBy || null,
+      acceptedAt: requestData.acceptedAt || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.db.add(STORES.bookingRequests, request);
+    return request;
+  }
+
+  async getBookingRequestById(id) {
+    await this.init();
+    return await this.db.get(STORES.bookingRequests, id);
+  }
+
+  async getBookingRequestsByClient(clientId) {
+    await this.init();
+    const tx = this.db.transaction(STORES.bookingRequests, 'readonly');
+    const store = tx.objectStore(STORES.bookingRequests);
+    const index = store.index('clientId');
+    return await index.getAll(clientId);
+  }
+
+  async getPendingBookingRequests() {
+    await this.init();
+    const tx = this.db.transaction(STORES.bookingRequests, 'readonly');
+    const store = tx.objectStore(STORES.bookingRequests);
+    const index = store.index('status');
+    return await index.getAll('pending');
+  }
+
+  async updateBookingRequest(id, updates) {
+    await this.init();
+    const request = await this.getBookingRequestById(id);
+    if (!request) throw new Error('Booking request not found');
+
+    const updatedRequest = {
+      ...request,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.db.put(STORES.bookingRequests, updatedRequest);
+    return updatedRequest;
   }
 
   // Review operations
@@ -343,7 +543,9 @@ class LeBarberDatabase {
       barbers: await this.db.getAll(STORES.barbers),
       bookings: await this.db.getAll(STORES.bookings),
       rentals: await this.db.getAll(STORES.rentals),
-      reviews: await this.db.getAll(STORES.reviews)
+      reviews: await this.db.getAll(STORES.reviews),
+      invitations: await this.db.getAll(STORES.invitations),
+      bookingRequests: await this.db.getAll(STORES.bookingRequests)
     };
     return data;
   }
@@ -357,6 +559,8 @@ class LeBarberDatabase {
     await this.db.clear(STORES.bookings);
     await this.db.clear(STORES.rentals);
     await this.db.clear(STORES.reviews);
+    await this.db.clear(STORES.invitations);
+    await this.db.clear(STORES.bookingRequests);
 
     // Import new data
     if (data.users) {
@@ -388,6 +592,18 @@ class LeBarberDatabase {
         await this.db.add(STORES.reviews, review);
       }
     }
+
+    if (data.invitations) {
+      for (const invitation of data.invitations) {
+        await this.db.add(STORES.invitations, invitation);
+      }
+    }
+
+    if (data.bookingRequests) {
+      for (const request of data.bookingRequests) {
+        await this.db.add(STORES.bookingRequests, request);
+      }
+    }
   }
 
   // Clear all data
@@ -398,6 +614,8 @@ class LeBarberDatabase {
     await this.db.clear(STORES.bookings);
     await this.db.clear(STORES.rentals);
     await this.db.clear(STORES.reviews);
+    await this.db.clear(STORES.invitations);
+    await this.db.clear(STORES.bookingRequests);
   }
 }
 

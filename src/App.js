@@ -12,6 +12,7 @@ import ClientDashboard from './pages/ClientDashboard';
 import BarberDashboard from './pages/BarberDashboard';
 import RentalListings from './pages/RentalListings';
 import AuthPage from './pages/AuthPage';
+import ClientRequestPage from './pages/ClientRequestPage';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
                   <Route path="/dashboard/client" element={<ClientDashboard />} />
                   <Route path="/dashboard/barber" element={<BarberDashboard />} />
                   <Route path="/rentals" element={<RentalListings />} />
+                  <Route path="/request-barber" element={<ClientRequestPage />} />
                 </Routes>
               </main>
             </div>
