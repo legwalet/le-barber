@@ -1,4 +1,3 @@
-import React, { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +7,12 @@ import {
   User,
   Menu,
   X,
-  Home,
+  Search,
+  Phone,
+  Mail,
+  Star,
+  Clock,
+  DollarSign,
   Users,
   Building,
   Calendar,
@@ -16,6 +20,7 @@ import {
   LogIn,
   UserCircle
 } from 'lucide-react';
+import { useState, useMemo } from 'react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -24,14 +29,31 @@ const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
 
   // Memoize navigation to ensure it updates when userType changes
-  const navigation = useMemo(() => [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Find Barbers', href: '/barbers', icon: Users },
-    ...(userType === 'client'
-      ? [{ name: 'My Bookings', href: '/dashboard/client', icon: Calendar }]
-      : [{ name: 'Rentals', href: '/rentals', icon: Building }]
-    ),
-  ], [userType]);
+  const navigation = useMemo(() => {
+    const baseNav = [
+      { name: 'Home', href: '/', icon: null },
+      { name: 'Barbers', href: '/barbers', icon: null }
+    ];
+
+    // Add conditional navigation items based on user type and authentication
+    if (userType === 'barber') {
+      if (isAuthenticated()) {
+        baseNav.push(
+          { name: 'Dashboard', href: '/dashboard/barber', icon: null },
+          { name: 'Rentals', href: '/rentals', icon: null }
+        );
+      }
+    } else if (userType === 'client') {
+      if (isAuthenticated()) {
+        baseNav.push(
+          { name: 'Dashboard', href: '/dashboard/client', icon: null },
+          { name: 'My Bookings', href: '/dashboard/client', icon: null }
+        );
+      }
+    }
+
+    return baseNav;
+  }, [userType, isAuthenticated]);
 
   const toggleUserType = () => {
     setUserType(userType === 'client' ? 'barber' : 'client');
@@ -44,40 +66,30 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-gradient-to-r from-primary-600 to-primary-700 text-white sticky top-0 z-50 shadow-trip">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center h-20">
+    <header className="bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center py-4">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-              <Scissors className="w-6 h-6 text-primary-600" />
-            </div>
-            <span className="text-2xl font-bold text-white">
-              Le Barber
-            </span>
-          </div>
+          <Link to="/" className="flex items-center space-x-2">
+            <Scissors className="w-8 h-8" />
+            <span className="text-xl font-bold">Le Barber</span>
+          </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-trip transition-all duration-200 ${
-                    isActive
-                      ? 'bg-white/20 text-white font-semibold'
-                      : 'text-white/90 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                </Link>
-              );
-            })}
+          <nav className="hidden md:flex items-center space-x-8">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`px-3 py-2 rounded-trip font-medium transition-all duration-200 ${
+                  location.pathname === item.href
+                    ? 'bg-white/20 text-white'
+                    : 'text-white/90 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
           </nav>
 
           {/* User Type Toggle & Location */}
@@ -146,46 +158,40 @@ const Header = () => {
 
             <div className="flex items-center space-x-2 text-white/90 bg-white/10 px-4 py-3 rounded-trip border border-white/20">
               <MapPin className="w-4 h-4" />
-              <span className="text-sm font-medium">Cape Town</span>
+              <span className="text-sm">Cape Town</span>
             </div>
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-3 rounded-trip text-white hover:bg-white/10 transition-colors duration-200"
-            >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden p-2 rounded-trip text-white hover:bg-white/10"
+          >
+            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-white/20 bg-primary-700/95">
-            <div className="py-4 space-y-2">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
+          <div className="md:hidden py-4 border-t border-white/20">
+            <nav className="space-y-2">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`block px-4 py-3 rounded-trip font-medium transition-all duration-200 ${
+                    location.pathname === item.href
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/90 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
 
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-trip transition-all duration-200 ${
-                      isActive
-                        ? 'bg-white/20 text-white font-semibold'
-                        : 'text-white/90 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-
+            <div className="mt-6 space-y-3">
               {isAuthenticated() ? (
                 <>
                   <div className="px-4 py-3 border-t border-white/20">

@@ -24,7 +24,6 @@ import {
 const AuthPage = () => {
   const navigate = useNavigate();
   const { googleLogin, manualRegister, manualLogin } = useAuth();
-  const [isLogin, setIsLogin] = useState(false);
   const [userType, setUserType] = useState(null); // 'barber' or 'client'
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -68,27 +67,29 @@ const AuthPage = () => {
     setError('');
 
     try {
-      let result;
+      // Check if user exists first
+      const existingUser = await manualLogin(formData.email, formData.password);
       
-      if (isLogin) {
-        // Login flow
-        result = await manualLogin(formData.email, formData.password);
-      } else {
-        // Registration flow
-        if (formData.password !== formData.confirmPassword) {
-          setError('Passwords do not match');
-          setLoading(false);
-          return;
-        }
-        
-        result = await manualRegister({
-          email: formData.email,
-          password: formData.password,
-          name: formData.name,
-          phone: formData.phone,
-          businessName: formData.businessName
-        }, userType);
+      if (existingUser.success) {
+        // User exists, login successful
+        navigate('/');
+        return;
       }
+
+      // User doesn't exist, try to register
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        setLoading(false);
+        return;
+      }
+      
+      const result = await manualRegister({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        phone: formData.phone,
+        businessName: formData.businessName
+      }, userType);
 
       if (result.success) {
         navigate('/');
@@ -116,19 +117,6 @@ const AuthPage = () => {
       setUserType(null);
     }
     setError('');
-  };
-
-  const toggleAuthMode = () => {
-    setIsLogin(!isLogin);
-    setError('');
-    setFormData({
-      email: '',
-      password: '',
-      name: '',
-      phone: '',
-      businessName: '',
-      confirmPassword: ''
-    });
   };
 
   const renderBarberOnboarding = () => (
@@ -163,11 +151,9 @@ const AuthPage = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              {isLogin ? 'Welcome Back!' : 'Create Your Account'}
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Sign In / Register</h2>
             <p className="text-gray-600">
-              {isLogin ? 'Sign in to your barber account' : 'Set up your barber profile'}
+              Enter your details to sign in or create a new account
             </p>
           </div>
 
@@ -177,7 +163,7 @@ const AuthPage = () => {
               onError={handleGoogleError}
               theme="filled_blue"
               size="large"
-              text={isLogin ? "signin_with" : "signup_with"}
+              text="signin_with"
               shape="rectangular"
               width="100%"
             />
@@ -193,23 +179,20 @@ const AuthPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Enter your full name"
-                    required={!isLogin}
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter your full name"
+                />
               </div>
-            )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
@@ -227,41 +210,35 @@ const AuthPage = () => {
               </div>
             </div>
 
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Enter your phone number"
-                    required={!isLogin}
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter your phone number"
+                />
               </div>
-            )}
+            </div>
 
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="businessName"
-                    value={formData.businessName}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Enter your business name"
-                    required={!isLogin}
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
+              <div className="relative">
+                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  name="businessName"
+                  value={formData.businessName}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter your business name"
+                />
               </div>
-            )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
@@ -273,7 +250,7 @@ const AuthPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder={isLogin ? "Enter your password" : "Create a password"}
+                  placeholder="Enter your password"
                   required
                 />
                 <button
@@ -286,30 +263,27 @@ const AuthPage = () => {
               </div>
             </div>
 
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Confirm your password"
-                    required={!isLogin}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Confirm your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
-            )}
+            </div>
 
             {error && (
               <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-trip text-red-600">
@@ -328,19 +302,15 @@ const AuthPage = () => {
               ) : (
                 <>
                   <LogIn className="w-5 h-5" />
-                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                  <span>Sign In / Register</span>
                 </>
               )}
             </button>
 
             <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={toggleAuthMode}
-                className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-              >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-              </button>
+              <p className="text-sm text-gray-600">
+                Enter your details above to sign in or create a new account
+              </p>
             </div>
           </form>
         </div>
@@ -380,11 +350,9 @@ const AuthPage = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              {isLogin ? 'Welcome Back!' : 'Create Your Account'}
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Sign In / Register</h2>
             <p className="text-gray-600">
-              {isLogin ? 'Sign in to your client account' : 'Set up your client profile'}
+              Enter your details to sign in or create a new account
             </p>
           </div>
 
@@ -394,7 +362,7 @@ const AuthPage = () => {
               onError={handleGoogleError}
               theme="filled_blue"
               size="large"
-              text={isLogin ? "signin_with" : "signup_with"}
+              text="signin_with"
               shape="rectangular"
               width="100%"
             />
@@ -410,23 +378,20 @@ const AuthPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your full name"
-                    required={!isLogin}
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your full name"
+                />
               </div>
-            )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
@@ -444,23 +409,20 @@ const AuthPage = () => {
               </div>
             </div>
 
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your phone number"
-                    required={!isLogin}
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your phone number"
+                />
               </div>
-            )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
@@ -472,7 +434,7 @@ const AuthPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={isLogin ? "Enter your password" : "Create a password"}
+                  placeholder="Enter your password"
                   required
                 />
                 <button
@@ -485,30 +447,27 @@ const AuthPage = () => {
               </div>
             </div>
 
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Confirm your password"
-                    required={!isLogin}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Confirm your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
-            )}
+            </div>
 
             {error && (
               <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-trip text-red-600">
@@ -527,19 +486,15 @@ const AuthPage = () => {
               ) : (
                 <>
                   <LogIn className="w-5 h-5" />
-                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                  <span>Sign In / Register</span>
                 </>
               )}
             </button>
 
             <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={toggleAuthMode}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-              </button>
+              <p className="text-sm text-gray-600">
+                Enter your details above to sign in or create a new account
+              </p>
             </div>
           </form>
         </div>
