@@ -56,37 +56,32 @@ const ClientRequestPage = () => {
     setError('');
 
     try {
-      // Create booking request
-      await database.createBookingRequest({
+      const bookingRequest = {
+        id: `request_${Date.now()}`,
         clientId: user.id,
         clientName: user.name,
         clientEmail: user.email,
         service: formData.service,
         preferredDate: formData.preferredDate,
         preferredTime: formData.preferredTime,
-        maxPrice: parseFloat(formData.maxPrice),
-        location: formData.location || (userLocation ? `${userLocation.lat},${userLocation.lng}` : ''),
-        notes: formData.notes
-      });
+        maxPrice: parseFloat(formData.maxPrice) || 0,
+        notes: formData.notes,
+        location: userLocation,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
 
+      await database.createBookingRequest(bookingRequest);
+      
+      // Update user status to show they have an active request
+      await database.setUserRequestStatus(user.id, true);
+      
       setSuccess(true);
-      setFormData({
-        service: '',
-        preferredDate: '',
-        preferredTime: '',
-        maxPrice: '',
-        location: '',
-        notes: ''
-      });
-
-      // Redirect to dashboard after 3 seconds
       setTimeout(() => {
         navigate('/dashboard/client');
       }, 3000);
-
     } catch (error) {
-      console.error('Error creating booking request:', error);
-      setError('Failed to submit request. Please try again.');
+      setError('Failed to submit booking request. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -88,6 +88,20 @@ const HomePage = () => {
       };
 
       await database.createBookingRequest(bookingRequest);
+      
+      // Create a temporary user status for quick booking clients
+      const tempUserId = `quick_${Date.now()}`;
+      await database.updateUserStatus(tempUserId, {
+        userId: tempUserId,
+        userType: 'client',
+        isOnline: true,
+        hasActiveRequest: true,
+        clientName: bookingForm.name,
+        clientPhone: bookingForm.phone,
+        lastSeen: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      });
+      
       setBookingSuccess(true);
       setBookingForm({
         name: '',

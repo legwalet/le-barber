@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }) => {
           if (userData) {
             setUser(userData);
             setUserType(userData.userType);
+            // Mark user as online
+            await database.markUserOnline(userData.id, userData.userType);
           } else {
             // Clear invalid user data
             localStorage.removeItem('leBarberUserId');
@@ -42,6 +44,23 @@ export const AuthProvider = ({ children }) => {
 
     checkAuth();
   }, []);
+
+  // Mark user offline when component unmounts
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (user) {
+        database.markUserOffline(user.id);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (user) {
+        database.markUserOffline(user.id);
+      }
+    };
+  }, [user]);
 
   // Google OAuth Login
   const googleLogin = async (credential, userType) => {
@@ -156,6 +175,9 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = () => {
+    if (user) {
+      database.markUserOffline(user.id);
+    }
     setUser(null);
     setUserType(null);
     localStorage.removeItem('leBarberUserId');

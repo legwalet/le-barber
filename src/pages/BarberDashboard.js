@@ -38,6 +38,8 @@ const BarberDashboard = () => {
   const [showRentalModal, setShowRentalModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [liveClients, setLiveClients] = useState([]);
+  const [refreshInterval, setRefreshInterval] = useState(null);
 
   // Rental form state
   const [rentalForm, setRentalForm] = useState({
@@ -52,7 +54,22 @@ const BarberDashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+    
+    // Set up real-time refresh for live dashboard
+    const interval = setInterval(() => {
+      if (activeTab === 'live') {
+        loadLiveClients();
+      }
+    }, 10000); // Refresh every 10 seconds
+    
+    setRefreshInterval(interval);
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [activeTab]);
 
   const loadDashboardData = async () => {
     try {
@@ -84,6 +101,23 @@ const BarberDashboard = () => {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadLiveClients = async () => {
+    try {
+      const onlineClients = await database.getOnlineClients();
+      const clientsWithRequests = await database.getClientsWithActiveRequests();
+      
+      // Combine and deduplicate clients
+      const allClients = [...onlineClients, ...clientsWithRequests];
+      const uniqueClients = allClients.filter((client, index, self) => 
+        index === self.findIndex(c => c.userId === client.userId)
+      );
+      
+      setLiveClients(uniqueClients);
+    } catch (error) {
+      console.error('Error loading live clients:', error);
     }
   };
 
@@ -149,28 +183,20 @@ const BarberDashboard = () => {
 
   const handleAcceptRequest = async (requestId) => {
     try {
-      const request = await database.getBookingRequestById(requestId);
-      if (request) {
-        // Create a booking from the request
-        await database.createBooking({
-          clientId: request.clientId,
-          barberId: barberProfile.id,
-          service: request.service,
-          date: request.preferredDate,
-          time: request.preferredTime,
-          price: request.maxPrice,
-          status: 'confirmed'
-        });
-
-        // Update request status
-        await database.updateBookingRequest(requestId, {
-          status: 'accepted',
-          acceptedBy: barberProfile.id,
-          acceptedAt: new Date().toISOString()
-        });
-
-        loadDashboardData();
+      await database.updateBookingRequest(requestId, {
+        status: 'accepted',
+        acceptedBy: barberProfile.id,
+        acceptedAt: new Date().toISOString()
+      });
+      
+      // Update client's request status
+      const request = bookingRequests.find(r => r.id === requestId);
+      if (request && request.clientId) {
+        await database.setUserRequestStatus(request.clientId, false);
       }
+      
+      loadDashboardData();
+      loadLiveClients();
     } catch (error) {
       console.error('Error accepting request:', error);
     }
@@ -183,7 +209,15 @@ const BarberDashboard = () => {
         declinedBy: barberProfile.id,
         declinedAt: new Date().toISOString()
       });
+      
+      // Update client's request status
+      const request = bookingRequests.find(r => r.id === requestId);
+      if (request && request.clientId) {
+        await database.setUserRequestStatus(request.clientId, false);
+      }
+      
       loadDashboardData();
+      loadLiveClients();
     } catch (error) {
       console.error('Error declining request:', error);
     }
@@ -324,6 +358,7 @@ const BarberDashboard = () => {
             <nav className="flex space-x-8 px-6">
               {[
                 { id: 'overview', label: 'Overview', icon: Home },
+                { id: 'live', label: 'Live Dashboard', icon: Bell },
                 { id: 'bookings', label: 'Bookings', icon: Calendar },
                 { id: 'requests', label: 'Client Requests', icon: Bell },
                 { id: 'rentals', label: 'Rental Spaces', icon: Building },
@@ -383,6 +418,96 @@ const BarberDashboard = () => {
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'live' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Live Client Activity</h3>
+                  <div className="text-sm text-gray-500">
+                    {liveClients.length} active client{liveClients.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+                
+                {liveClients.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No active clients at the moment</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {liveClients.map((client) => (
+                      <div key={client.userId} className="bg-white border border-gray-200 rounded-trip p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-3 h-3 rounded-full ${client.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                            <h4 className="font-semibold text-gray-900">
+                              {client.clientName || 'Client'}
+                            </h4>
+                          </div>
+                          <div className="flex space-x-1">
+                            {client.isOnline && (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                Online
+                              </span>
+                            )}
+                            {client.hasActiveRequest && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                Requesting
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 text-sm">
+                          {client.clientPhone && (
+                            <div className="flex items-center space-x-2">
+                              <Phone className="w-4 h-4 text-gray-400" />
+                              <span className="text-gray-600">{client.clientPhone}</span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-600">
+                              Last seen: {new Date(client.lastSeen).toLocaleTimeString()}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {client.hasActiveRequest && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-xs text-gray-500 mb-2">Active Request</p>
+                            <div className="bg-blue-50 p-2 rounded-trip">
+                              <p className="text-xs text-blue-800">
+                                This client has an active booking request waiting for response
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="mt-6 p-4 bg-gray-50 rounded-trip">
+                  <h4 className="font-medium text-gray-900 mb-2">Legend</h4>
+                  <div className="flex items-center space-x-4 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="text-gray-600">Online</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                      <span className="text-gray-600">Offline</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Requesting</span>
+                      <span className="text-gray-600">Has active request</span>
+                    </div>
                   </div>
                 </div>
               </div>

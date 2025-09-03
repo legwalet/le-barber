@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'leBarberDB';
-const DB_VERSION = 2; // Increment version for new stores
+const DB_VERSION = 3; // Increment version for new status tracking
 
 // Database schema
 const STORES = {
@@ -11,7 +11,8 @@ const STORES = {
   rentals: 'rentals',
   reviews: 'reviews',
   invitations: 'invitations',
-  bookingRequests: 'bookingRequests'
+  bookingRequests: 'bookingRequests',
+  userStatus: 'userStatus' // New store for tracking user status
 };
 
 class LeBarberDatabase {
@@ -25,19 +26,18 @@ class LeBarberDatabase {
 
     this.db = await openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion, newVersion) {
-        // Create stores
+        // Create stores (existing and new)
         if (!db.objectStoreNames.contains(STORES.users)) {
           const userStore = db.createObjectStore(STORES.users, { keyPath: 'id' });
           userStore.createIndex('email', 'email', { unique: true });
           userStore.createIndex('userType', 'userType', { unique: false });
         }
-
         if (!db.objectStoreNames.contains(STORES.barbers)) {
           const barberStore = db.createObjectStore(STORES.barbers, { keyPath: 'id' });
           barberStore.createIndex('userId', 'userId', { unique: true });
           barberStore.createIndex('location', 'location', { unique: false });
+          barberStore.createIndex('rating', 'rating', { unique: false });
         }
-
         if (!db.objectStoreNames.contains(STORES.bookings)) {
           const bookingStore = db.createObjectStore(STORES.bookings, { keyPath: 'id' });
           bookingStore.createIndex('clientId', 'clientId', { unique: false });
@@ -45,14 +45,12 @@ class LeBarberDatabase {
           bookingStore.createIndex('date', 'date', { unique: false });
           bookingStore.createIndex('status', 'status', { unique: false });
         }
-
         if (!db.objectStoreNames.contains(STORES.rentals)) {
           const rentalStore = db.createObjectStore(STORES.rentals, { keyPath: 'id' });
           rentalStore.createIndex('barberId', 'barberId', { unique: false });
           rentalStore.createIndex('location', 'location', { unique: false });
           rentalStore.createIndex('status', 'status', { unique: false });
         }
-
         if (!db.objectStoreNames.contains(STORES.reviews)) {
           const reviewStore = db.createObjectStore(STORES.reviews, { keyPath: 'id' });
           reviewStore.createIndex('barberId', 'barberId', { unique: false });
@@ -74,6 +72,15 @@ class LeBarberDatabase {
           requestStore.createIndex('status', 'status', { unique: false });
           requestStore.createIndex('location', 'location', { unique: false });
           requestStore.createIndex('maxPrice', 'maxPrice', { unique: false });
+        }
+
+        // New stores for version 3
+        if (!db.objectStoreNames.contains(STORES.userStatus)) {
+          const statusStore = db.createObjectStore(STORES.userStatus, { keyPath: 'userId' });
+          statusStore.createIndex('userType', 'userType', { unique: false });
+          statusStore.createIndex('isOnline', 'isOnline', { unique: false });
+          statusStore.createIndex('lastSeen', 'lastSeen', { unique: false });
+          statusStore.createIndex('hasActiveRequest', 'hasActiveRequest', { unique: false });
         }
       }
     });
@@ -616,6 +623,75 @@ class LeBarberDatabase {
     await this.db.clear(STORES.reviews);
     await this.db.clear(STORES.invitations);
     await this.db.clear(STORES.bookingRequests);
+  }
+
+  // User Status Methods
+  async updateUserStatus(userId, statusData) {
+    const db = await this.init();
+    const existingStatus = await db.get(STORES.userStatus, userId);
+    
+    const updatedStatus = {
+      userId,
+      ...existingStatus,
+      ...statusData,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    return await db.put(STORES.userStatus, updatedStatus);
+  }
+
+  async getUserStatus(userId) {
+    const db = await this.init();
+    return await db.get(STORES.userStatus, userId);
+  }
+
+  async getOnlineClients() {
+    const db = await this.init();
+    const allStatuses = await db.getAll(STORES.userStatus);
+    return allStatuses.filter(status => 
+      status.userType === 'client' && 
+      status.isOnline === true
+    );
+  }
+
+  async getClientsWithActiveRequests() {
+    const db = await this.init();
+    const allStatuses = await db.getAll(STORES.userStatus);
+    return allStatuses.filter(status => 
+      status.userType === 'client' && 
+      status.hasActiveRequest === true
+    );
+  }
+
+  async getActiveClients() {
+    const db = await this.init();
+    const allStatuses = await db.getAll(STORES.userStatus);
+    return allStatuses.filter(status => 
+      status.userType === 'client' && 
+      (status.isOnline === true || status.hasActiveRequest === true)
+    );
+  }
+
+  async markUserOnline(userId, userType) {
+    return await this.updateUserStatus(userId, {
+      isOnline: true,
+      userType,
+      lastSeen: new Date().toISOString()
+    });
+  }
+
+  async markUserOffline(userId) {
+    return await this.updateUserStatus(userId, {
+      isOnline: false,
+      lastSeen: new Date().toISOString()
+    });
+  }
+
+  async setUserRequestStatus(userId, hasActiveRequest) {
+    return await this.updateUserStatus(userId, {
+      hasActiveRequest,
+      lastSeen: new Date().toISOString()
+    });
   }
 }
 
