@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import database from '../services/database';
 
 const AuthContext = createContext();
 
@@ -18,21 +19,28 @@ export const AuthProvider = ({ children }) => {
 
   // Check for existing user on app load
   useEffect(() => {
-    const savedUser = localStorage.getItem('leBarberUser');
-    const savedUserType = localStorage.getItem('leBarberUserType');
-    
-    if (savedUser) {
+    const checkAuth = async () => {
       try {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-        setUserType(savedUserType || 'client');
+        const savedUserId = localStorage.getItem('leBarberUserId');
+        if (savedUserId) {
+          const userData = await database.getUserById(savedUserId);
+          if (userData) {
+            setUser(userData);
+            setUserType(userData.userType);
+          } else {
+            // Clear invalid user data
+            localStorage.removeItem('leBarberUserId');
+          }
+        }
       } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('leBarberUser');
-        localStorage.removeItem('leBarberUserType');
+        console.error('Error checking authentication:', error);
+        localStorage.removeItem('leBarberUserId');
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
   // Google OAuth Login
@@ -40,36 +48,42 @@ export const AuthProvider = ({ children }) => {
     try {
       const decoded = jwtDecode(credential);
       
-      const userData = {
-        id: decoded.sub,
-        email: decoded.email,
-        name: decoded.name,
-        picture: decoded.picture,
-        userType: userType,
-        isGoogleUser: true,
-        createdAt: new Date().toISOString(),
-        // Additional fields based on user type
-        ...(userType === 'barber' ? {
-          businessName: '',
-          services: [],
-          location: null,
-          availability: [],
-          pricing: {},
-          portfolio: []
-        } : {
-          preferences: {
-            preferredServices: [],
-            maxDistance: 10,
-            priceRange: 'any'
-          },
-          bookingHistory: []
-        })
-      };
+      // Check if user already exists
+      let userData = await database.getUserByEmail(decoded.email);
+      
+      if (userData) {
+        // User exists, update with new Google data
+        userData = await database.updateUser(userData.id, {
+          name: decoded.name,
+          picture: decoded.picture,
+          isGoogleUser: true,
+          userType: userType
+        });
+      } else {
+        // Create new user
+        userData = await database.createUser({
+          id: decoded.sub,
+          email: decoded.email,
+          name: decoded.name,
+          picture: decoded.picture,
+          userType: userType,
+          isGoogleUser: true
+        });
+
+        // If user is a barber, create barber profile
+        if (userType === 'barber') {
+          await database.createBarber({
+            userId: userData.id,
+            name: userData.name,
+            email: userData.email,
+            picture: userData.picture
+          });
+        }
+      }
 
       setUser(userData);
       setUserType(userType);
-      localStorage.setItem('leBarberUser', JSON.stringify(userData));
-      localStorage.setItem('leBarberUserType', userType);
+      localStorage.setItem('leBarberUserId', userData.id);
       
       return { success: true, user: userData };
     } catch (error) {
@@ -81,36 +95,36 @@ export const AuthProvider = ({ children }) => {
   // Manual Registration
   const manualRegister = async (userData, userType) => {
     try {
-      const newUser = {
-        id: `manual_${Date.now()}`,
+      // Check if user already exists
+      const existingUser = await database.getUserByEmail(userData.email);
+      if (existingUser) {
+        return { success: false, error: 'User with this email already exists' };
+      }
+
+      // Create new user
+      const newUser = await database.createUser({
         email: userData.email,
         name: userData.name,
         phone: userData.phone,
         userType: userType,
         isGoogleUser: false,
-        createdAt: new Date().toISOString(),
-        // Additional fields based on user type
-        ...(userType === 'barber' ? {
-          businessName: userData.businessName || '',
-          services: userData.services || [],
-          location: userData.location || null,
-          availability: userData.availability || [],
-          pricing: userData.pricing || {},
-          portfolio: userData.portfolio || []
-        } : {
-          preferences: {
-            preferredServices: userData.preferredServices || [],
-            maxDistance: userData.maxDistance || 10,
-            priceRange: userData.priceRange || 'any'
-          },
-          bookingHistory: []
-        })
-      };
+        ...(userType === 'barber' && { businessName: userData.businessName })
+      });
+
+      // If user is a barber, create barber profile
+      if (userType === 'barber') {
+        await database.createBarber({
+          userId: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          phone: newUser.phone,
+          businessName: newUser.businessName
+        });
+      }
 
       setUser(newUser);
       setUserType(userType);
-      localStorage.setItem('leBarberUser', JSON.stringify(newUser));
-      localStorage.setItem('leBarberUserType', userType);
+      localStorage.setItem('leBarberUserId', newUser.id);
       
       return { success: true, user: newUser };
     } catch (error) {
@@ -122,17 +136,18 @@ export const AuthProvider = ({ children }) => {
   // Manual Login
   const manualLogin = async (email, password) => {
     try {
-      // In a real app, this would validate against a backend
-      const savedUser = localStorage.getItem('leBarberUser');
-      if (savedUser) {
-        const userData = JSON.parse(savedUser);
-        if (userData.email === email) {
-          setUser(userData);
-          setUserType(userData.userType);
-          return { success: true, user: userData };
-        }
+      // In a real app, this would validate password
+      // For now, we'll just check if the user exists
+      const userData = await database.getUserByEmail(email);
+      
+      if (userData) {
+        setUser(userData);
+        setUserType(userData.userType);
+        localStorage.setItem('leBarberUserId', userData.id);
+        return { success: true, user: userData };
+      } else {
+        return { success: false, error: 'User not found' };
       }
-      return { success: false, error: 'Invalid credentials' };
     } catch (error) {
       console.error('Manual login error:', error);
       return { success: false, error: 'Login failed' };
@@ -143,15 +158,19 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setUserType(null);
-    localStorage.removeItem('leBarberUser');
-    localStorage.removeItem('leBarberUserType');
+    localStorage.removeItem('leBarberUserId');
   };
 
   // Update user profile
-  const updateProfile = (updates) => {
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    localStorage.setItem('leBarberUser', JSON.stringify(updatedUser));
+  const updateProfile = async (updates) => {
+    try {
+      const updatedUser = await database.updateUser(user.id, updates);
+      setUser(updatedUser);
+      return { success: true, user: updatedUser };
+    } catch (error) {
+      console.error('Profile update error:', error);
+      return { success: false, error: 'Profile update failed' };
+    }
   };
 
   // Check if user is authenticated
@@ -169,6 +188,38 @@ export const AuthProvider = ({ children }) => {
     return userType === 'client';
   };
 
+  // Get user's barber profile (if they are a barber)
+  const getBarberProfile = async () => {
+    if (!user || userType !== 'barber') return null;
+    
+    try {
+      return await database.getBarberByUserId(user.id);
+    } catch (error) {
+      console.error('Error getting barber profile:', error);
+      return null;
+    }
+  };
+
+  // Get user's bookings
+  const getUserBookings = async () => {
+    if (!user) return [];
+    
+    try {
+      if (userType === 'client') {
+        return await database.getBookingsByClient(user.id);
+      } else {
+        const barberProfile = await getBarberProfile();
+        if (barberProfile) {
+          return await database.getBookingsByBarber(barberProfile.id);
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error('Error getting user bookings:', error);
+      return [];
+    }
+  };
+
   const value = {
     user,
     userType,
@@ -181,7 +232,9 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isBarber,
     isClient,
-    setUserType
+    setUserType,
+    getBarberProfile,
+    getUserBookings
   };
 
   return (
