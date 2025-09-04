@@ -2,6 +2,7 @@
   "name": "le-barber",
   "version": "1.0.0",
   "description": "A modern barber shop management application",
+  "homepage": ".",
   "main": "src/index.js",
   "scripts": {
     "start": "react-scripts start",
