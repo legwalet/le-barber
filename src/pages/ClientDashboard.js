@@ -8,7 +8,6 @@ import {
   Clock, 
   MapPin, 
   Star, 
-  DollarSign, 
   Plus, 
   ArrowRight,
   CheckCircle,
@@ -302,7 +301,7 @@ const ClientDashboard = () => {
                               <span>{distance ? `${distance.toFixed(1)}km away` : 'Location available'}</span>
                             </div>
                             <div className="flex items-center text-sm text-gray-600">
-                              <DollarSign className="w-4 h-4 mr-2" />
+                              <span className="w-4 h-4 mr-2 text-primary-600">R</span>
                               <span>From R{barber.services?.[0]?.price || 'Contact for pricing'}</span>
                             </div>
                           </div>

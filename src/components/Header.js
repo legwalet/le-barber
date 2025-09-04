@@ -12,7 +12,6 @@ import {
   Mail,
   Star,
   Clock,
-  DollarSign,
   Users,
   Building,
   Calendar,

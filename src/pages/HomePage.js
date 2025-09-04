@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Scissors, Users, Star, ArrowRight, MapPin, Navigation, Phone, User, Calendar, DollarSign, CheckCircle } from 'lucide-react';
+import { Scissors, Users, Star, ArrowRight, MapPin, Navigation, Phone, User, Calendar, CheckCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import database from '../services/database';
@@ -341,7 +341,7 @@ const HomePage = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Budget (R)</label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4">R</span>
                     <input
                       type="number"
                       name="maxPrice"

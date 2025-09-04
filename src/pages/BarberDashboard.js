@@ -12,7 +12,6 @@ import {
   MapPin, 
   Star, 
   Clock, 
-  DollarSign, 
   CheckCircle, 
   XCircle, 
   Plus, 
@@ -749,8 +748,8 @@ const BarberDashboard = () => {
                           {rental.address}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <DollarSign className="w-4 h-4 inline mr-1" />
-                          ${rental.price} per {rental.priceType}
+                                                  <span className="text-primary-600 font-semibold">R</span>
+                        R{rental.price} per {rental.priceType}
                         </p>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(rental.status)}`}>
                           {rental.status}

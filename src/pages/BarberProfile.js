@@ -10,7 +10,6 @@ import {
   Star, 
   Calendar, 
   Clock, 
-  DollarSign,
   ArrowLeft,
   User,
   CheckCircle

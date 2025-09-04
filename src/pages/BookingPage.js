@@ -7,7 +7,6 @@ import {
   Scissors, 
   Calendar, 
   Clock, 
-  DollarSign,
   ArrowLeft,
   User,
   Phone,

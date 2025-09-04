@@ -5,7 +5,6 @@ import {
   User, 
   Calendar, 
   Clock, 
-  DollarSign, 
   MapPin, 
   FileText, 
   Send, 
@@ -226,22 +225,19 @@ const ClientRequestPage = () => {
             </div>
 
             {/* Budget */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Maximum Budget (USD)
-              </label>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Budget (R)</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5">R</span>
                 <input
                   type="number"
                   name="maxPrice"
                   value={formData.maxPrice}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your maximum budget"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   min="0"
-                  step="0.01"
-                  required
+                  step="10"
                 />
               </div>
               <p className="text-sm text-gray-500 mt-1">

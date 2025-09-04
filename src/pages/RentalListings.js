@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Building, MapPin, DollarSign, Calendar, Phone, Mail, Navigation } from 'lucide-react';
+import { Building, MapPin, Calendar, Phone, Mail, Navigation } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const RentalListings = () => {
@@ -60,8 +60,8 @@ const RentalListings = () => {
                   <h3 class="font-bold text-lg mb-2">${listing.shopName}</h3>
                   <p class="text-gray-600 text-sm mb-2">${listing.address}</p>
                   <div class="flex items-center mb-2">
-                    <span class="text-green-500 mr-1">$</span>
-                    <span class="text-sm">R${listing.monthlyRent.toLocaleString()}/month</span>
+                    <span class="text-green-500 mr-1">R</span>
+                    <span class="text-sm">R{listing.monthlyRent.toLocaleString()}/month</span>
                   </div>
                   <div class="flex items-center mb-2">
                     <span class="text-blue-500 mr-1">📅</span>
