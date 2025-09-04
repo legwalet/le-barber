@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
         const savedUserId = localStorage.getItem('leBarberUserId');
         if (savedUserId) {
           const userData = await database.getUserById(savedUserId);
-          if (userData) {
+          if (userData && userData.userType) {
             setUser(userData);
             setUserType(userData.userType);
             // Mark user as online
@@ -32,11 +32,15 @@ export const AuthProvider = ({ children }) => {
           } else {
             // Clear invalid user data
             localStorage.removeItem('leBarberUserId');
+            setUser(null);
+            setUserType(null);
           }
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
         localStorage.removeItem('leBarberUserId');
+        setUser(null);
+        setUserType(null);
       } finally {
         setLoading(false);
       }
@@ -71,7 +75,12 @@ export const AuthProvider = ({ children }) => {
       let userData = await database.getUserByEmail(decoded.email);
       
       if (userData) {
-        // User exists, update with new Google data
+        // User exists, check if userType matches
+        if (userData.userType !== userType) {
+          return { success: false, error: `This email is registered as a ${userData.userType}. Please login as ${userData.userType} or use a different email.` };
+        }
+        
+        // Update with new Google data
         userData = await database.updateUser(userData.id, {
           name: decoded.name,
           picture: decoded.picture,
@@ -159,13 +168,13 @@ export const AuthProvider = ({ children }) => {
       // For now, we'll just check if the user exists
       const userData = await database.getUserByEmail(email);
       
-      if (userData) {
+      if (userData && userData.userType) {
         setUser(userData);
         setUserType(userData.userType);
         localStorage.setItem('leBarberUserId', userData.id);
         return { success: true, user: userData };
       } else {
-        return { success: false, error: 'User not found' };
+        return { success: false, error: 'User not found or invalid user type' };
       }
     } catch (error) {
       console.error('Manual login error:', error);
@@ -197,17 +206,17 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user is authenticated
   const isAuthenticated = () => {
-    return user !== null;
+    return user !== null && userType !== null;
   };
 
   // Check if user is a barber
   const isBarber = () => {
-    return userType === 'barber';
+    return userType === 'barber' && user !== null;
   };
 
   // Check if user is a client
   const isClient = () => {
-    return userType === 'client';
+    return userType === 'client' && user !== null;
   };
 
   // Get user's barber profile (if they are a barber)

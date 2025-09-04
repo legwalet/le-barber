@@ -26,7 +26,7 @@ import { useState, useMemo } from 'react';
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { userType } = useApp();
+  const { userType } = useAuth(); // Use AuthContext for userType
   const { user, isAuthenticated, logout } = useAuth();
 
   // Memoize navigation to ensure it updates when userType changes
