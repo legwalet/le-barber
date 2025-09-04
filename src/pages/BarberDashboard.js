@@ -109,15 +109,7 @@ const BarberDashboard = () => {
   const loadLiveClients = async () => {
     try {
       const onlineClients = await database.getOnlineClients();
-      const clientsWithRequests = await database.getClientsWithActiveRequests();
-      
-      // Combine and deduplicate clients
-      const allClients = [...onlineClients, ...clientsWithRequests];
-      const uniqueClients = allClients.filter((client, index, self) => 
-        index === self.findIndex(c => c.userId === client.userId)
-      );
-      
-      setLiveClients(uniqueClients);
+      setLiveClients(onlineClients);
     } catch (error) {
       console.error('Error loading live clients:', error);
     }
@@ -359,7 +351,7 @@ const BarberDashboard = () => {
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-6">
               {[
-                { id: 'live', label: 'Live Dashboard', icon: Bell },
+                { id: 'live', label: 'Live Dashboard', icon: Users },
                 { id: 'bookings', label: 'Client Requests', icon: Bell },
                 { id: 'rentals', label: 'Rental Spaces', icon: Building },
                 { id: 'invitations', label: 'Invitations', icon: UserPlus }
@@ -432,10 +424,10 @@ const BarberDashboard = () => {
                       className="flex items-center justify-between p-4 bg-blue-50 rounded-trip border border-blue-200 hover:border-blue-300 transition-colors"
                     >
                       <div className="flex items-center space-x-3">
-                        <Bell className="w-5 h-5 text-blue-600" />
+                        <Users className="w-5 h-5 text-blue-600" />
                         <div>
-                          <p className="font-medium text-gray-900">View Live Clients</p>
-                          <p className="text-sm text-gray-600">See who's online and requesting</p>
+                          <p className="font-medium text-gray-900">Live Dashboard</p>
+                          <p className="text-sm text-gray-600">See who's online right now</p>
                         </div>
                       </div>
                       <ArrowRight className="w-4 h-4 text-gray-400" />
@@ -464,14 +456,15 @@ const BarberDashboard = () => {
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-semibold text-gray-900">Live Client Activity</h3>
                   <div className="text-sm text-gray-500">
-                    {liveClients.length} active client{liveClients.length !== 1 ? 's' : ''}
+                    {liveClients.length} online client{liveClients.length !== 1 ? 's' : ''}
                   </div>
                 </div>
                 
                 {liveClients.length === 0 ? (
                   <div className="text-center py-8">
                     <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No active clients at the moment</p>
+                    <p className="text-gray-500">No clients online at the moment</p>
+                    <p className="text-sm text-gray-400 mt-2">Clients will appear here when they're active on the platform</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -479,23 +472,14 @@ const BarberDashboard = () => {
                       <div key={client.userId} className="bg-white border border-gray-200 rounded-trip p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center space-x-2">
-                            <div className={`w-3 h-3 rounded-full ${client.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                             <h4 className="font-semibold text-gray-900">
                               {client.clientName || 'Client'}
                             </h4>
                           </div>
-                          <div className="flex space-x-1">
-                            {client.isOnline && (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                Online
-                              </span>
-                            )}
-                            {client.hasActiveRequest && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                Requesting
-                              </span>
-                            )}
-                          </div>
+                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                            Online
+                          </span>
                         </div>
                         
                         <div className="space-y-2 text-sm">
@@ -513,37 +497,17 @@ const BarberDashboard = () => {
                             </span>
                           </div>
                         </div>
-                        
-                        {client.hasActiveRequest && (
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <p className="text-xs text-gray-500 mb-2">Active Request</p>
-                            <div className="bg-blue-50 p-2 rounded-trip">
-                              <p className="text-xs text-blue-800">
-                                This client has an active booking request waiting for response
-                              </p>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
                 )}
                 
                 <div className="mt-6 p-4 bg-gray-50 rounded-trip">
-                  <h4 className="font-medium text-gray-900 mb-2">Legend</h4>
-                  <div className="flex items-center space-x-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-600">Online</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                      <span className="text-gray-600">Offline</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Requesting</span>
-                      <span className="text-gray-600">Has active request</span>
-                    </div>
+                  <h4 className="font-medium text-gray-900 mb-2">Live Dashboard Info</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>• Shows clients who are currently online and active on the platform</p>
+                    <p>• Updates automatically every 10 seconds</p>
+                    <p>• Use this to see potential clients who might be looking for services</p>
                   </div>
                 </div>
               </div>
