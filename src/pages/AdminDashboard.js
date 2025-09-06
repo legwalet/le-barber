@@ -5,7 +5,7 @@ import database from '../services/database';
 import AddUserModal from '../components/AddUserModal';
 import { 
   Users, 
-  Barbers, 
+  Scissors, 
   UserPlus, 
   UserMinus, 
   TrendingUp, 
@@ -217,7 +217,7 @@ const AdminDashboard = () => {
             {[
               { id: 'overview', label: 'Overview', icon: TrendingUp },
               { id: 'users', label: 'All Users', icon: Users },
-              { id: 'barbers', label: 'Barbers', icon: Barbers },
+              { id: 'barbers', label: 'Barbers', icon: Scissors },
               { id: 'clients', label: 'Clients', icon: Users },
             ].map(tab => (
               <button
@@ -253,7 +253,7 @@ const AdminDashboard = () => {
               
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center">
-                  <Barbers className="w-8 h-8 text-green-600" />
+                  <Scissors className="w-8 h-8 text-green-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Barbers</p>
                     <p className="text-2xl font-bold text-gray-900">{metrics.totalBarbers}</p>
@@ -306,7 +306,7 @@ const AdminDashboard = () => {
               
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <div className="flex items-center">
-                  <Barbers className="w-8 h-8 text-teal-600" />
+                  <Scissors className="w-8 h-8 text-teal-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Active Barbers</p>
                     <p className="text-2xl font-bold text-gray-900">{metrics.activeBarbers}</p>
