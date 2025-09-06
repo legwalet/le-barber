@@ -45,7 +45,7 @@ const AdminDashboard = () => {
   });
 
   // Check if current user is admin
-  const isAdmin = user?.email === 'tshego@lebarber.com' || user?.name === 'Tshego';
+  const isAdmin = user?.email === 'legwalet11@gmail.com' || user?.name === 'Tshego';
 
   useEffect(() => {
     if (isAdmin) {

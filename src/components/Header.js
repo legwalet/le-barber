@@ -30,7 +30,7 @@ const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
 
   // Check if current user is admin (Tshego)
-  const isAdmin = user?.email === 'tshego@lebarber.com' || user?.name === 'Tshego';
+  const isAdmin = user?.email === 'legwalet11@gmail.com' || user?.name === 'Tshego';
 
   // Memoize navigation to ensure it updates when userType changes
   const navigation = useMemo(() => {
