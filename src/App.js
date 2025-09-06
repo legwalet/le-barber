@@ -13,6 +13,7 @@ import AuthPage from './pages/AuthPage';
 import ClientRequestPage from './pages/ClientRequestPage';
 import BarberDashboard from './pages/BarberDashboard';
 import ClientDashboard from './pages/ClientDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Sync component to keep AuthContext and AppContext in sync
 const ContextSync = ({ children }) => {
@@ -45,6 +46,7 @@ function App() {
                     <Route path="/book/:barberId" element={<BookingPage />} />
                     <Route path="/dashboard/barber" element={<BarberDashboard />} />
                     <Route path="/dashboard/client" element={<ClientDashboard />} />
+                    <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/rentals" element={<RentalListings />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/request-barber" element={<ClientRequestPage />} />

@@ -18,7 +18,8 @@ import {
   LogOut,
   LogIn,
   UserCircle,
-  Bell
+  Bell,
+  Shield
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
@@ -28,6 +29,9 @@ const Header = () => {
   const { userType } = useAuth(); // Use AuthContext for userType
   const { user, isAuthenticated, logout } = useAuth();
 
+  // Check if current user is admin (Tshego)
+  const isAdmin = user?.email === 'tshego@lebarber.com' || user?.name === 'Tshego';
+
   // Memoize navigation to ensure it updates when userType changes
   const navigation = useMemo(() => {
     const baseNav = [
@@ -36,6 +40,11 @@ const Header = () => {
 
     // Add conditional navigation items based on user type and authentication
     if (isAuthenticated()) {
+      // Add admin link for Tshego
+      if (isAdmin) {
+        baseNav.push({ name: 'Admin', href: '/admin', icon: Shield });
+      }
+      
       if (userType === 'barber') {
         baseNav.push(
           { name: 'Dashboard', href: '/dashboard/barber', icon: null },
@@ -54,7 +63,7 @@ const Header = () => {
     }
 
     return baseNav;
-  }, [userType, isAuthenticated]);
+  }, [userType, isAuthenticated, isAdmin]);
 
   const handleLogout = () => {
     logout();

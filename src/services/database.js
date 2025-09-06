@@ -700,6 +700,53 @@ class LeBarberDatabase {
       lastSeen: new Date().toISOString()
     });
   }
+
+  // Admin functions
+  async getAllUsers() {
+    await this.init();
+    return await this.db.getAll(STORES.users);
+  }
+
+  async deleteUser(userId) {
+    await this.init();
+    const tx = this.db.transaction([STORES.users, STORES.barbers], 'readwrite');
+    
+    try {
+      // Delete user
+      await tx.objectStore(STORES.users).delete(userId);
+      
+      // Delete associated barber profile if exists
+      const barberStore = tx.objectStore(STORES.barbers);
+      const barbers = await barberStore.getAll();
+      const barberToDelete = barbers.find(b => b.userId === userId);
+      if (barberToDelete) {
+        await barberStore.delete(barberToDelete.id);
+      }
+      
+      await tx.complete;
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+  }
+
+  async updateUser(userId, updates) {
+    await this.init();
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    const updatedUser = {
+      ...user,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    await this.db.put(STORES.users, updatedUser);
+    return updatedUser;
+  }
 }
 
 // Create singleton instance
