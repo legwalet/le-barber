@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
+import BarberOnboarding from '../components/BarberOnboarding';
+import database from '../services/database';
 import { 
   Scissors, 
   User, 
@@ -24,11 +26,13 @@ import {
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { googleLogin, manualRegister, manualLogin } = useAuth();
+  const { googleLogin, manualRegister, manualLogin, setUser, setUserType: setAuthUserType } = useAuth();
   const [userType, setUserType] = useState(null); // 'barber' or 'client'
   const [step, setStep] = useState(1);
   const [authMode, setAuthMode] = useState(null); // 'login' or 'signin'
   const [redirectInfo, setRedirectInfo] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [newBarberUser, setNewBarberUser] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -72,7 +76,13 @@ const AuthPage = () => {
     try {
       const result = await googleLogin(credentialResponse.credential, userType);
       if (result.success) {
-        handleSuccessfulAuth();
+        // For barbers, always show onboarding for new accounts
+        if (userType === 'barber') {
+          setNewBarberUser(result.user);
+          setShowOnboarding(true);
+        } else {
+          handleSuccessfulAuth();
+        }
       } else {
         setError(result.error || 'Google login failed');
       }
@@ -128,7 +138,13 @@ const AuthPage = () => {
       }, userType);
 
       if (result.success) {
-        handleSuccessfulAuth();
+        // For barbers, always show onboarding for new accounts
+        if (userType === 'barber') {
+          setNewBarberUser(result.user);
+          setShowOnboarding(true);
+        } else {
+          handleSuccessfulAuth();
+        }
       } else {
         setError(result.error || 'Registration failed');
       }
@@ -155,6 +171,29 @@ const AuthPage = () => {
       setUserType(null);
     }
     setError('');
+  };
+
+  const handleOnboardingComplete = async (barberProfile) => {
+    try {
+      // If this was a new account creation, we need to set the user in auth context
+      if (newBarberUser && newBarberUser.id.startsWith('temp_')) {
+        // Get the newly created user
+        const newUser = await database.getUserById(barberProfile.userId);
+        if (newUser) {
+          // Set user in auth context
+          setUser(newUser);
+          setAuthUserType('barber');
+          localStorage.setItem('leBarberUserId', newUser.id);
+        }
+      }
+      
+      setShowOnboarding(false);
+      setNewBarberUser(null);
+      handleSuccessfulAuth();
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      setError('Failed to complete setup. Please try again.');
+    }
   };
 
   const renderBarberOnboarding = () => (
@@ -236,7 +275,7 @@ const AuthPage = () => {
         </div>
       )}
 
-      {step === 2 && authMode && (
+      {step === 2 && authMode === 'login' && (
         <div>
           <div className="mb-6">
             <button
@@ -246,36 +285,11 @@ const AuthPage = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              {authMode === 'login' ? 'Login to Your Account' : 'Create New Account'}
-            </h2>
-            <p className="text-gray-600">
-              {authMode === 'login' 
-                ? 'Enter your credentials to access your account'
-                : 'Fill in your details to create a new barber account'
-              }
-            </p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Login to Your Account</h2>
+            <p className="text-gray-600">Enter your credentials to access your account</p>
           </div>
 
-          <form onSubmit={authMode === 'login' ? handleLogin : handleSignIn} className="space-y-4">
-            {authMode === 'signin' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Enter your full name"
-                    required={authMode === 'signin'}
-                  />
-                </div>
-              </div>
-            )}
-
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
               <div className="relative">
@@ -292,40 +306,6 @@ const AuthPage = () => {
               </div>
             </div>
 
-            {authMode === 'signin' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Enter your phone number"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
-                  <div className="relative">
-                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      name="businessName"
-                      value={formData.businessName}
-                      onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Enter your business name"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <div className="relative">
@@ -336,7 +316,7 @@ const AuthPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder={authMode === 'login' ? "Enter your password" : "Create a password"}
+                  placeholder="Enter your password"
                   required
                 />
                 <button
@@ -348,31 +328,6 @@ const AuthPage = () => {
                 </button>
               </div>
             </div>
-
-            {authMode === 'signin' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-trip focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Confirm your password"
-                    required={authMode === 'signin'}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {error && (
               <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-trip text-red-600">
@@ -390,12 +345,57 @@ const AuthPage = () => {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  {authMode === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
-                  <span>{authMode === 'login' ? 'Login' : 'Create Account'}</span>
+                  <LogIn className="w-5 h-5" />
+                  <span>Login</span>
                 </>
               )}
             </button>
           </form>
+        </div>
+      )}
+
+      {step === 2 && authMode === 'signin' && (
+        <div>
+          <div className="mb-6">
+            <button
+              onClick={goBack}
+              className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Create New Account</h2>
+            <p className="text-gray-600">Let's set up your barber profile step by step</p>
+          </div>
+
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center">
+              <Scissors className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Ready to Get Started?</h3>
+            <p className="text-gray-600 mb-6">
+              We'll guide you through setting up your barber profile with all the details clients need to find you.
+            </p>
+            
+            <button
+              onClick={() => {
+                // Start the card-based onboarding directly
+                setNewBarberUser({
+                  id: `temp_${Date.now()}`,
+                  name: '',
+                  email: '',
+                  phone: '',
+                  businessName: '',
+                  userType: 'barber'
+                });
+                setShowOnboarding(true);
+              }}
+              className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-4 px-6 rounded-trip font-semibold hover:from-primary-700 hover:to-primary-800 transition-all duration-200 flex items-center justify-center space-x-2"
+            >
+              <span>Start Profile Setup</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -666,6 +666,16 @@ const AuthPage = () => {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Show onboarding for new barbers
+  if (showOnboarding && newBarberUser) {
+    return (
+      <BarberOnboarding 
+        user={newBarberUser} 
+        onComplete={handleOnboardingComplete}
+      />
     );
   }
 

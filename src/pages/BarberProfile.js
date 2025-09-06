@@ -133,12 +133,23 @@ const BarberProfile = () => {
           {/* Header Section */}
           <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-8 text-white">
             <div className="flex items-center space-x-4">
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
-                <Scissors className="w-10 h-10" />
+              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
+                {barber.profileImage ? (
+                  <img
+                    src={barber.profileImage}
+                    alt={barber.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Scissors className="w-10 h-10" />
+                )}
               </div>
               <div>
                 <h1 className="text-3xl font-bold">{barber.name}</h1>
                 <p className="text-primary-100 text-lg">{barber.description || 'Professional barber with years of experience'}</p>
+                {barber.experience && (
+                  <p className="text-primary-100 text-sm mt-1">Experience: {barber.experience}</p>
+                )}
                 <div className="flex items-center space-x-4 mt-2">
                   <div className="flex items-center space-x-1">
                     <Star className="w-5 h-5 text-yellow-300 fill-current" />
@@ -252,18 +263,31 @@ const BarberProfile = () => {
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-3">Business Hours</h3>
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Monday - Friday</span>
-                      <span className="font-medium">8:00 AM - 6:00 PM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Saturday</span>
-                      <span className="font-medium">9:00 AM - 5:00 PM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Sunday</span>
-                      <span className="font-medium">10:00 AM - 4:00 PM</span>
-                    </div>
+                    {barber.businessHours ? (
+                      Object.entries(barber.businessHours).map(([day, hours]) => (
+                        <div key={day} className="flex justify-between">
+                          <span className="text-gray-600 capitalize">{day}</span>
+                          <span className="font-medium">
+                            {hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Monday - Friday</span>
+                          <span className="font-medium">8:00 AM - 6:00 PM</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Saturday</span>
+                          <span className="font-medium">9:00 AM - 5:00 PM</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Sunday</span>
+                          <span className="font-medium">10:00 AM - 4:00 PM</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

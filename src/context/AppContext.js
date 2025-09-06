@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import database from '../services/database';
 
 const AppContext = createContext();
 
@@ -841,11 +842,58 @@ const mockRentalListings = [
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Initialize with mock data
+  // Initialize with data from database and mock data
   useEffect(() => {
-    dispatch({ type: ACTIONS.SET_BARBERS, payload: mockBarbers });
-    dispatch({ type: ACTIONS.SET_BARBER_SHOPS, payload: mockBarberShops });
-    dispatch({ type: ACTIONS.SET_RENTAL_LISTINGS, payload: mockRentalListings });
+    const loadData = async () => {
+      try {
+        // Load barbers from database
+        const dbBarbers = await database.getAllBarbers();
+        console.log('Loaded barbers from database:', dbBarbers);
+        
+        // Combine database barbers with mock barbers (avoid duplicates)
+        const allBarbers = [...mockBarbers];
+        
+        // Add database barbers that aren't already in mock data
+        dbBarbers.forEach(dbBarber => {
+          const exists = mockBarbers.some(mockBarber => mockBarber.id === dbBarber.id);
+          if (!exists) {
+            // Convert database barber format to match mock barber format
+            const formattedBarber = {
+              id: dbBarber.id,
+              name: dbBarber.name,
+              photo: dbBarber.profileImage || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
+              location: dbBarber.location || { lat: -33.9249, lng: 18.4241 },
+              address: dbBarber.address || 'Address not provided',
+              services: dbBarber.services || [],
+              rating: dbBarber.rating || 5.0,
+              reviews: dbBarber.reviews || [],
+              availability: dbBarber.businessHours ? Object.entries(dbBarber.businessHours).map(([day, hours]) => ({
+                day: day.charAt(0).toUpperCase() + day.slice(1),
+                hours: hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`
+              })) : [],
+              skills: dbBarber.specialties || [],
+              experience: dbBarber.experience || 'Not specified',
+              bio: dbBarber.description || 'Professional barber',
+              hasShop: false,
+              isRentingSpace: false
+            };
+            allBarbers.push(formattedBarber);
+          }
+        });
+        
+        dispatch({ type: ACTIONS.SET_BARBERS, payload: allBarbers });
+        dispatch({ type: ACTIONS.SET_BARBER_SHOPS, payload: mockBarberShops });
+        dispatch({ type: ACTIONS.SET_RENTAL_LISTINGS, payload: mockRentalListings });
+      } catch (error) {
+        console.error('Error loading barbers from database:', error);
+        // Fallback to mock data only
+        dispatch({ type: ACTIONS.SET_BARBERS, payload: mockBarbers });
+        dispatch({ type: ACTIONS.SET_BARBER_SHOPS, payload: mockBarberShops });
+        dispatch({ type: ACTIONS.SET_RENTAL_LISTINGS, payload: mockRentalListings });
+      }
+    };
+    
+    loadData();
 
     // Get user location
     if (navigator.geolocation) {
@@ -887,6 +935,45 @@ export function AppProvider({ children }) {
     addBarberShop: (shop) => dispatch({ type: ACTIONS.ADD_BARBER_SHOP, payload: shop }),
     addRentalRequest: (request) => dispatch({ type: ACTIONS.ADD_RENTAL_REQUEST, payload: request }),
     updateRentalRequest: (request) => dispatch({ type: ACTIONS.UPDATE_RENTAL_REQUEST, payload: request }),
+    // Refresh barbers from database
+    refreshBarbers: async () => {
+      try {
+        const dbBarbers = await database.getAllBarbers();
+        console.log('Refreshed barbers from database:', dbBarbers);
+        
+        const allBarbers = [...mockBarbers];
+        
+        dbBarbers.forEach(dbBarber => {
+          const exists = mockBarbers.some(mockBarber => mockBarber.id === dbBarber.id);
+          if (!exists) {
+            const formattedBarber = {
+              id: dbBarber.id,
+              name: dbBarber.name,
+              photo: dbBarber.profileImage || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
+              location: dbBarber.location || { lat: -33.9249, lng: 18.4241 },
+              address: dbBarber.address || 'Address not provided',
+              services: dbBarber.services || [],
+              rating: dbBarber.rating || 5.0,
+              reviews: dbBarber.reviews || [],
+              availability: dbBarber.businessHours ? Object.entries(dbBarber.businessHours).map(([day, hours]) => ({
+                day: day.charAt(0).toUpperCase() + day.slice(1),
+                hours: hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`
+              })) : [],
+              skills: dbBarber.specialties || [],
+              experience: dbBarber.experience || 'Not specified',
+              bio: dbBarber.description || 'Professional barber',
+              hasShop: false,
+              isRentingSpace: false
+            };
+            allBarbers.push(formattedBarber);
+          }
+        });
+        
+        dispatch({ type: ACTIONS.SET_BARBERS, payload: allBarbers });
+      } catch (error) {
+        console.error('Error refreshing barbers:', error);
+      }
+    },
   };
 
   return (

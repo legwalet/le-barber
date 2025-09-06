@@ -229,7 +229,15 @@ const BarberList = () => {
               return (
                 <div key={barber.id} className="bg-white rounded-trip shadow-trip overflow-hidden hover:shadow-trip-lg transition-shadow">
                   <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                    <Scissors className="w-16 h-16 text-primary-600" />
+                    {barber.profileImage ? (
+                      <img
+                        src={barber.profileImage}
+                        alt={barber.name}
+                        className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                      />
+                    ) : (
+                      <Scissors className="w-16 h-16 text-primary-600" />
+                    )}
                   </div>
                   <div className="p-6">
                     <h3 className="text-xl font-bold text-primary-900 mb-2">{barber.name}</h3>
@@ -242,9 +250,11 @@ const BarberList = () => {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center">
                         <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                        <span className="text-sm font-medium">{barber.rating} ({barber.reviews.length} reviews)</span>
+                        <span className="text-sm font-medium">{barber.rating} ({barber.reviews?.length || 0} reviews)</span>
                       </div>
-                      <span className="text-sm font-semibold text-primary-600">From R{Math.min(...barber.services.map(s => s.price))}</span>
+                      <span className="text-sm font-semibold text-primary-600">
+                        From R{barber.services?.length > 0 ? Math.min(...barber.services.map(s => s.price)) : 'Contact'}
+                      </span>
                     </div>
                     <div className="flex gap-2">
                       <Link to={`/barber/${barber.id}`} className="flex-1 btn-primary text-center text-sm">

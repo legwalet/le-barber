@@ -98,13 +98,21 @@ export const AuthProvider = ({ children }) => {
           isGoogleUser: true
         });
 
-        // If user is a barber, create barber profile
+        // If user is a barber, create basic barber profile (will be enhanced during onboarding)
         if (userType === 'barber') {
           await database.createBarber({
             userId: userData.id,
             name: userData.name,
             email: userData.email,
-            picture: userData.picture
+            picture: userData.picture,
+            businessName: userData.businessName || '',
+            description: '',
+            address: '',
+            location: null,
+            services: [],
+            businessHours: {},
+            experience: '',
+            specialties: []
           });
         }
       }
@@ -139,14 +147,21 @@ export const AuthProvider = ({ children }) => {
         ...(userType === 'barber' && { businessName: userData.businessName })
       });
 
-      // If user is a barber, create barber profile
+      // If user is a barber, create basic barber profile (will be enhanced during onboarding)
       if (userType === 'barber') {
         await database.createBarber({
           userId: newUser.id,
           name: newUser.name,
           email: newUser.email,
           phone: newUser.phone,
-          businessName: newUser.businessName
+          businessName: newUser.businessName || '',
+          description: '',
+          address: '',
+          location: null,
+          services: [],
+          businessHours: {},
+          experience: '',
+          specialties: []
         });
       }
 
